@@ -57,7 +57,11 @@ export default function AuthPage() {
             if (data.otp) setDevOtp(data.otp); // Dev mode only
             setStep('otp');
         } catch (err) {
-            setError(err.response?.data?.error || 'حدث خطأ في إرسال الرمز');
+            if (!err.response) {
+                setError('تعذر الاتصال بالخادم. تأكد من إعداد VITE_API_URL و CORS ثم أعد المحاولة.');
+            } else {
+                setError(err.response?.data?.error || 'حدث خطأ في إرسال الرمز');
+            }
         } finally {
             setLoading(false);
         }
@@ -86,7 +90,11 @@ export default function AuthPage() {
                 navigate('/dashboard');
             }
         } catch (err) {
-            setError(err.response?.data?.error || 'رمز التحقق غير صحيح');
+            if (!err.response) {
+                setError('تعذر الاتصال بالخادم. تحقق من رابط الـ API وإعدادات CORS.');
+            } else {
+                setError(err.response?.data?.error || 'رمز التحقق غير صحيح');
+            }
         } finally {
             setLoading(false);
         }
