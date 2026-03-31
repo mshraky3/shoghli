@@ -17,16 +17,6 @@ const categoryRoutes = require('./routes/categories');
 
 const app = express();
 
-const normalizeOrigin = (origin) => (origin ? origin.replace(/\/+$/, '') : origin);
-const envClientOrigin = normalizeOrigin(process.env.CLIENT_URL);
-const allowedOrigins = new Set([
-    envClientOrigin,
-    'http://localhost:5173',
-    'https://localhost:5173',
-    'http://localhost:4173',
-    'https://localhost:4173',
-].filter(Boolean));
-
 // Diagnostic logging — visible in Vercel function logs
 console.log('[boot] NODE_ENV:', process.env.NODE_ENV);
 console.log('[boot] VERCEL:', process.env.VERCEL);
@@ -43,24 +33,7 @@ app.use((req, _res, next) => {
 
 // Security
 app.use(helmet());
-app.use(cors({
-    origin: (origin, callback) => {
-        if (!origin) return callback(null, true);
-        const normalized = normalizeOrigin(origin);
-        let isVercelPreview = false;
-        try {
-            isVercelPreview = /\.vercel\.app$/i.test(new URL(normalized).hostname);
-        } catch {
-            isVercelPreview = false;
-        }
-        if (allowedOrigins.has(normalized) || isVercelPreview) {
-            return callback(null, true);
-        }
-        console.warn('[cors] Blocked origin:', origin);
-        return callback(new Error('CORS blocked for this origin'));
-    },
-    credentials: true,
-}));
+app.use(cors());
 
 // Rate limiting
 const limiter = rateLimit({
