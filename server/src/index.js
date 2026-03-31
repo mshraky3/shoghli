@@ -17,6 +17,20 @@ const categoryRoutes = require('./routes/categories');
 
 const app = express();
 
+// Diagnostic logging — visible in Vercel function logs
+console.log('[boot] NODE_ENV:', process.env.NODE_ENV);
+console.log('[boot] VERCEL:', process.env.VERCEL);
+console.log('[boot] CLIENT_URL:', process.env.CLIENT_URL);
+console.log('[boot] DB_HOST:', process.env.DATABASE_HOST ? process.env.DATABASE_HOST.slice(0, 20) + '...' : 'NOT SET');
+console.log('[boot] JWT_SECRET set:', !!process.env.JWT_SECRET);
+console.log('[boot] SMS_PROVIDER:', process.env.SMS_PROVIDER);
+
+// Request logging
+app.use((req, _res, next) => {
+    console.log(`[req] ${req.method} ${req.path} — origin: ${req.headers.origin || '-'}`);
+    next();
+});
+
 // Security
 app.use(helmet());
 app.use(cors({
@@ -45,9 +59,25 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/locations', locationRoutes);
 app.use('/api/categories', categoryRoutes);
 
-// Health check
+// Root + health check
+app.get('/', (req, res) => {
+    res.json({
+        name: 'شغلي API',
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        env: process.env.NODE_ENV || 'development',
+    });
+});
+
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        db_host: process.env.DATABASE_HOST ? 'configured' : 'missing',
+        jwt: process.env.JWT_SECRET ? 'configured' : 'missing',
+        sms: process.env.SMS_PROVIDER || 'not set',
+        client_url: process.env.CLIENT_URL || 'not set',
+    });
 });
 
 // 404 handler
