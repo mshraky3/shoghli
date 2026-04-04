@@ -50,15 +50,19 @@ export default function AuthPage() {
             <div className="container" style={{ paddingTop: '60px' }}>
                 {/* Logo */}
                 <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-                    <div style={{
-                        width: 80, height: 80, borderRadius: 20,
-                        background: 'var(--primary)', margin: '0 auto 16px',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 36, color: 'white', fontWeight: 800,
-                    }}>
-                        شغلي
-                    </div>
-                    <h1 style={{ fontSize: 28, fontWeight: 800 }}>شغلي</h1>
+                    <img
+                        src="/imges/logo.ico"
+                        alt="شعار شغلي"
+                        style={{
+                            width: 80,
+                            height: 80,
+                            borderRadius: 20,
+                            objectFit: 'cover',
+                            display: 'block',
+                            margin: '0 auto 16px',
+                            boxShadow: '0 8px 22px rgba(37, 99, 235, 0.25)',
+                        }}
+                    />
                     <p style={{ color: 'var(--gray-500)', marginTop: 4 }}>ابحث عن عمل قريب منك</p>
                 </div>
 

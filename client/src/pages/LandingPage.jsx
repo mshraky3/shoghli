@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import SyriaFlag from '../components/SyriaFlag';
+import './LandingPage.css';
 
 const JOBS = [
     { icon: '⚡', label: 'كهربائي' },
@@ -47,6 +48,7 @@ const HOW_STEPS_EMPLOYER = [
 ];
 
 const IMAGES = {
+    logo: '/imges/logo.ico',
     hero: '/imges/Hero%20image.png',
     categories: '/imges/Worker%20categories.png',
     map: '/imges/Map%20section%20image.png',
@@ -56,506 +58,216 @@ const IMAGES = {
 
 export default function LandingPage() {
     return (
-        <div style={{ direction: 'rtl', fontFamily: "'Tajawal', sans-serif", background: 'white', color: '#111827' }}>
-            {/* ===== NAV ===== */}
-            <nav style={{
-                position: 'sticky', top: 0, zIndex: 100,
-                background: 'white', borderBottom: '1px solid #e5e7eb',
-                padding: '12px 24px', display: 'flex',
-                alignItems: 'center', justifyContent: 'space-between',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
-            }}>
-                <div style={{ fontSize: 24, fontWeight: 900, color: '#2563eb' }}>شغلي</div>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                    <a href="#how" style={{ color: '#4b5563', textDecoration: 'none', fontSize: 15 }}>كيف يعمل</a>
-                    <a href="#jobs" style={{ color: '#4b5563', textDecoration: 'none', fontSize: 15 }}>المهن</a>
-                    <a href="#about" style={{ color: '#4b5563', textDecoration: 'none', fontSize: 15 }}>من نحن</a>
-                    <a href="#news" style={{ color: '#4b5563', textDecoration: 'none', fontSize: 15 }}>أخبار</a>
-                    <a href="#contact" style={{ color: '#4b5563', textDecoration: 'none', fontSize: 15 }}>تواصل</a>
-                    <Link to="/auth" style={{
-                        background: '#2563eb', color: 'white',
-                        padding: '8px 20px', borderRadius: 8,
-                        textDecoration: 'none', fontWeight: 700, fontSize: 15,
-                    }}>سجّل الآن</Link>
+        <div className="landing" dir="rtl">
+            <nav className="landing-nav">
+                <div className="landing-logo-wrap">
+                    <img src={IMAGES.logo} alt="شعار شغلي" className="landing-logo-img" />
+                </div>
+                <div className="landing-nav-actions">
+                    <a href="#how">كيف يعمل</a>
+                    <a href="#jobs">المهن</a>
+                    <a href="#about">من نحن</a>
+                    <a href="#news">أخبار</a>
+                    <a href="#contact">تواصل</a>
+                    <Link to="/auth" className="landing-cta-sm">سجّل الآن</Link>
                 </div>
             </nav>
 
-            {/* ===== HERO ===== */}
-            <section style={{
-                background: 'linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%)',
-                color: 'white', padding: '72px 24px 96px', overflow: 'hidden',
-            }}>
-                <div style={{
-                    maxWidth: 1180, margin: '0 auto',
-                    display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                    gap: 40, alignItems: 'center',
-                }}>
-                    <div style={{ textAlign: 'right' }}>
-                        <div style={{
-                            background: 'rgba(255,255,255,0.15)', display: 'inline-block',
-                            borderRadius: 50, padding: '6px 20px', marginBottom: 20,
-                            fontSize: 14, fontWeight: 600, backdropFilter: 'blur(4px)',
-                        }}>
-                            <SyriaFlag size={18} style={{ marginLeft: 6, verticalAlign: 'middle' }} /> متاح الآن في سوريا فقط
+            <section className="landing-hero">
+                <div className="landing-wrap landing-hero-grid">
+                    <div className="landing-hero-copy">
+                        <div className="landing-pill">
+                            <SyriaFlag size={16} /> متاح الآن في سوريا فقط
                         </div>
-                        <h1 style={{ fontSize: 52, fontWeight: 900, lineHeight: 1.15, marginBottom: 20 }}>
-                            شغلي تربطك<br />بالفرصة الأقرب إليك
-                        </h1>
-                        <p style={{ fontSize: 20, opacity: 0.92, maxWidth: 560, marginBottom: 32, lineHeight: 1.8 }}>
-                            شغلي تُقرّب العمّال من أصحاب العمل في سوريا عبر خريطة تفاعلية واضحة وسريعة. سواء كنت تبحث عن عمل يومي أو تحتاج كهربائياً أو طبيباً في قريتك، ستجد الطريق الأقصر للتواصل.
+                        <h1>شغلي تربطك بالفرصة الأقرب إليك</h1>
+                        <p>
+                            شغلي تُقرّب العمّال من أصحاب العمل عبر خريطة تفاعلية واضحة وسريعة.
+                            إذا كنت تبحث عن عمل يومي أو تحتاج فني قريب منك، ستجد الطريق الأقصر للتواصل.
                         </p>
-                        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 22 }}>
-                            <Link to="/auth" style={{
-                                background: 'white', color: '#1e40af',
-                                padding: '16px 40px', borderRadius: 12,
-                                textDecoration: 'none', fontWeight: 800,
-                                fontSize: 18, boxShadow: '0 10px 30px rgba(0,0,0,0.18)',
-                            }}>
-                                🔍 أبحث عن عامل
-                            </Link>
-                            <Link to="/auth" style={{
-                                background: 'rgba(255,255,255,0.15)', color: 'white',
-                                padding: '16px 40px', borderRadius: 12,
-                                textDecoration: 'none', fontWeight: 800,
-                                fontSize: 18, border: '2px solid rgba(255,255,255,0.5)',
-                                backdropFilter: 'blur(4px)',
-                            }}>
-                                💼 أبحث عن عمل
-                            </Link>
+                        <div className="landing-actions">
+                            <Link to="/auth" className="landing-btn landing-btn-solid">أبحث عن عامل</Link>
+                            <Link to="/auth" className="landing-btn landing-btn-glass">أبحث عن عمل</Link>
                         </div>
-                        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                            {['مجاني تماماً', 'بدون رسوم', 'تواصل مباشر', 'يعتمد على الموقع'].map((item) => (
-                                <span key={item} style={{
-                                    background: 'rgba(255,255,255,0.14)',
-                                    border: '1px solid rgba(255,255,255,0.2)',
-                                    borderRadius: 999, padding: '8px 14px',
-                                    fontSize: 14, fontWeight: 600,
-                                }}>
-                                    {item}
-                                </span>
+                        <div className="landing-tags">
+                            <span>مجاني تماماً</span>
+                            <span>بدون رسوم</span>
+                            <span>تواصل مباشر</span>
+                            <span>يعتمد على الموقع</span>
+                        </div>
+                    </div>
+
+                    <div className="landing-hero-media">
+                        <img src={IMAGES.hero} alt="صورة رئيسية لمنصة شغلي" />
+                        <div className="landing-float landing-float-top">
+                            <small>فرص اليوم</small>
+                            <strong>+١٢٠</strong>
+                            <p>طلبات عمل قريبة من المستخدمين</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section className="landing-stats">
+                <div className="landing-wrap landing-stats-grid">
+                    <div><strong>+٢٠</strong><span>مهنة وحرفة متاحة</span></div>
+                    <div><strong>١٤</strong><span>محافظة سورية</span></div>
+                    <div><strong>٪١٠٠</strong><span>مجاني وبدون رسوم</span></div>
+                    <div><strong>٢٤/٧</strong><span>متاح طوال اليوم</span></div>
+                </div>
+            </section>
+
+            <section id="how" className="landing-section">
+                <div className="landing-wrap">
+                    <div className="landing-head">
+                        <h2>كيف تعمل المنصة؟</h2>
+                        <p>ثلاث خطوات بسيطة تُوصّلك لما تحتاجه</p>
+                    </div>
+                    <div className="landing-how-grid">
+                        <div className="landing-how-card worker">
+                            <h3>إذا كنت تبحث عن عمل</h3>
+                            {HOW_STEPS_WORKER.map((s) => (
+                                <article key={s.num} className="landing-step">
+                                    <span>{s.num}</span>
+                                    <div>
+                                        <h4>{s.title}</h4>
+                                        <p>{s.desc}</p>
+                                    </div>
+                                </article>
                             ))}
+                            <Link to="/auth" className="landing-btn landing-btn-solid">سجّل كعامل الآن</Link>
                         </div>
-                    </div>
-                    <div style={{ position: 'relative', minHeight: 520 }}>
-                        <div style={{
-                            position: 'absolute', inset: '30px 0 0 40px',
-                            background: 'radial-gradient(circle, rgba(255,255,255,0.22), transparent 62%)',
-                        }} />
-                        <img
-                            src={IMAGES.hero}
-                            alt="صورة رئيسية لمنصة شغلي تُظهر التفاعل بين العامل وصاحب العمل"
-                            style={{
-                                width: '100%', height: 520, objectFit: 'cover',
-                                borderRadius: 28, display: 'block',
-                                boxShadow: '0 22px 60px rgba(11, 32, 84, 0.35)',
-                                border: '1px solid rgba(255,255,255,0.18)',
-                            }}
-                        />
-                        <div style={{
-                            position: 'absolute', top: 24, right: -12,
-                            background: 'white', color: '#111827', borderRadius: 18,
-                            padding: '14px 16px', minWidth: 180,
-                            boxShadow: '0 12px 28px rgba(0,0,0,0.18)',
-                        }}>
-                            <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 4 }}>فرص اليوم</div>
-                            <div style={{ fontSize: 24, fontWeight: 900, color: '#1e40af' }}>+١٢٠</div>
-                            <div style={{ fontSize: 14, color: '#374151' }}>طلبات عمل قريبة من المستخدمين</div>
-                        </div>
-                        <div style={{
-                            position: 'absolute', bottom: 20, left: -12,
-                            background: 'rgba(15, 23, 42, 0.82)', color: 'white', borderRadius: 18,
-                            padding: '16px 18px', maxWidth: 220,
-                            backdropFilter: 'blur(8px)',
-                            boxShadow: '0 12px 28px rgba(0,0,0,0.2)',
-                        }}>
-                            <div style={{ fontSize: 13, opacity: 0.75, marginBottom: 6 }}>تجربة محلية</div>
-                            <div style={{ fontWeight: 800, marginBottom: 6 }}>من الحي إلى الحي</div>
-                            <div style={{ fontSize: 14, lineHeight: 1.7, opacity: 0.9 }}>واجهة عربية مصممة لسوريا وبنية قائمة على القرب الجغرافي.</div>
+
+                        <div className="landing-how-card employer">
+                            <h3>إذا كنت تبحث عن عامل</h3>
+                            {HOW_STEPS_EMPLOYER.map((s) => (
+                                <article key={s.num} className="landing-step">
+                                    <span>{s.num}</span>
+                                    <div>
+                                        <h4>{s.title}</h4>
+                                        <p>{s.desc}</p>
+                                    </div>
+                                </article>
+                            ))}
+                            <Link to="/auth" className="landing-btn landing-btn-success">ابحث عن عامل الآن</Link>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* ===== STATS ===== */}
-            <section style={{
-                background: '#f8faff', padding: '48px 24px',
-                display: 'flex', justifyContent: 'center', gap: 0,
-                borderBottom: '1px solid #e5e7eb',
-            }}>
-                {[
-                    { num: '+٢٠', label: 'مهنة وحرفة متاحة' },
-                    { num: '١٤', label: 'محافظة سورية' },
-                    { num: '٪١٠٠', label: 'مجاني وبدون رسوم' },
-                    { num: '٢٤/٧', label: 'متاح طوال اليوم' },
-                ].map((s, i) => (
-                    <div key={i} style={{
-                        flex: 1, textAlign: 'center', padding: '16px 8px',
-                        borderLeft: i > 0 ? '1px solid #e5e7eb' : 'none',
-                    }}>
-                        <div style={{ fontSize: 36, fontWeight: 900, color: '#2563eb' }}>{s.num}</div>
-                        <div style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>{s.label}</div>
+            <section id="jobs" className="landing-section alt">
+                <div className="landing-wrap">
+                    <div className="landing-banner-image">
+                        <img src={IMAGES.categories} alt="المهن المتاحة على المنصة" />
+                        <div>أكثر من ٢٠ فئة عمل جاهزة للظهور والبحث</div>
                     </div>
-                ))}
-            </section>
-
-            {/* ===== HOW IT WORKS ===== */}
-            <section id="how" style={{ padding: '80px 24px', maxWidth: 900, margin: '0 auto' }}>
-                <div style={{ textAlign: 'center', marginBottom: 56 }}>
-                    <h2 style={{ fontSize: 34, fontWeight: 900, marginBottom: 12 }}>كيف تعمل المنصة؟</h2>
-                    <p style={{ color: '#6b7280', fontSize: 17 }}>ثلاث خطوات بسيطة تُوصّلك لما تحتاجه</p>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48 }}>
-                    {/* Worker side */}
-                    <div>
-                        <div style={{
-                            background: '#eff6ff', borderRadius: 16, padding: '24px',
-                            marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12,
-                        }}>
-                            <span style={{ fontSize: 28 }}>💼</span>
-                            <div>
-                                <div style={{ fontWeight: 800, fontSize: 18 }}>إذا كنت تبحث عن عمل</div>
-                                <div style={{ color: '#6b7280', fontSize: 14 }}>سجّل ملفك مرة واحدة وانتظر العروض</div>
-                            </div>
-                        </div>
-                        {HOW_STEPS_WORKER.map((s) => (
-                            <div key={s.num} style={{ display: 'flex', gap: 16, marginBottom: 24, alignItems: 'flex-start' }}>
-                                <div style={{
-                                    minWidth: 40, height: 40, borderRadius: '50%',
-                                    background: '#2563eb', color: 'white',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontWeight: 900, fontSize: 18,
-                                }}>
-                                    {s.num}
-                                </div>
-                                <div>
-                                    <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{s.title}</div>
-                                    <div style={{ color: '#6b7280', fontSize: 14, lineHeight: 1.6 }}>{s.desc}</div>
-                                </div>
-                            </div>
-                        ))}
-                        <Link to="/auth" style={{
-                            display: 'block', textAlign: 'center',
-                            background: '#2563eb', color: 'white',
-                            padding: '14px', borderRadius: 10,
-                            textDecoration: 'none', fontWeight: 700, fontSize: 16,
-                        }}>سجّل كعامل الآن</Link>
+                    <div className="landing-head">
+                        <h2>المهن المتاحة على المنصة</h2>
+                        <p>من أعمال المنازل إلى الأطباء والمتخصصين</p>
                     </div>
-                    {/* Employer side */}
-                    <div>
-                        <div style={{
-                            background: '#f0fdf4', borderRadius: 16, padding: '24px',
-                            marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12,
-                        }}>
-                            <span style={{ fontSize: 28 }}>🔍</span>
-                            <div>
-                                <div style={{ fontWeight: 800, fontSize: 18 }}>إذا كنت تبحث عن عامل</div>
-                                <div style={{ color: '#6b7280', fontSize: 14 }}>ابحث واجد العامل المناسب في دقائق</div>
-                            </div>
-                        </div>
-                        {HOW_STEPS_EMPLOYER.map((s) => (
-                            <div key={s.num} style={{ display: 'flex', gap: 16, marginBottom: 24, alignItems: 'flex-start' }}>
-                                <div style={{
-                                    minWidth: 40, height: 40, borderRadius: '50%',
-                                    background: '#16a34a', color: 'white',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontWeight: 900, fontSize: 18,
-                                }}>
-                                    {s.num}
-                                </div>
-                                <div>
-                                    <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{s.title}</div>
-                                    <div style={{ color: '#6b7280', fontSize: 14, lineHeight: 1.6 }}>{s.desc}</div>
-                                </div>
-                            </div>
-                        ))}
-                        <Link to="/auth" style={{
-                            display: 'block', textAlign: 'center',
-                            background: '#16a34a', color: 'white',
-                            padding: '14px', borderRadius: 10,
-                            textDecoration: 'none', fontWeight: 700, fontSize: 16,
-                        }}>ابحث عن عامل الآن</Link>
-                    </div>
-                </div>
-            </section>
-
-            {/* ===== JOBS GRID ===== */}
-            <section id="jobs" style={{ background: '#f8faff', padding: '80px 24px' }}>
-                <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center' }}>
-                    <div style={{
-                        position: 'relative', marginBottom: 36, borderRadius: 24, overflow: 'hidden',
-                        boxShadow: '0 18px 40px rgba(15, 23, 42, 0.12)',
-                    }}>
-                        <img
-                            src={IMAGES.categories}
-                            alt="صورة تعرض مجموعة من المهن والحرف المتاحة على منصة شغلي"
-                            style={{ width: '100%', height: 320, objectFit: 'cover', display: 'block' }}
-                        />
-                        <div style={{
-                            position: 'absolute', inset: 0,
-                            background: 'linear-gradient(180deg, rgba(17,24,39,0.12), rgba(17,24,39,0.65))',
-                            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-                            padding: 24,
-                        }}>
-                            <div style={{
-                                background: 'rgba(255,255,255,0.9)', color: '#111827',
-                                padding: '14px 18px', borderRadius: 16, fontWeight: 800,
-                                boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-                            }}>
-                                أكثر من ٢٠ فئة عمل جاهزة للظهور والبحث
-                            </div>
-                        </div>
-                    </div>
-                    <h2 style={{ fontSize: 34, fontWeight: 900, marginBottom: 12 }}>المهن المتاحة على المنصة</h2>
-                    <p style={{ color: '#6b7280', fontSize: 17, marginBottom: 48 }}>من أعمال المنازل إلى الأطباء والمتخصصين</p>
-                    <div style={{
-                        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
-                        gap: 16, marginBottom: 40,
-                    }}>
+                    <div className="landing-jobs-grid">
                         {JOBS.map((j) => (
-                            <div key={j.label} style={{
-                                background: 'white', borderRadius: 14,
-                                padding: '20px 12px', textAlign: 'center',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                                border: '1px solid #e5e7eb',
-                            }}>
-                                <div style={{ fontSize: 32, marginBottom: 8 }}>{j.icon}</div>
-                                <div style={{ fontWeight: 700, fontSize: 15 }}>{j.label}</div>
+                            <div key={j.label} className="landing-job-card">
+                                <div>{j.icon}</div>
+                                <strong>{j.label}</strong>
                             </div>
                         ))}
                     </div>
-                    <p style={{ color: '#6b7280', marginBottom: 24, fontSize: 15 }}>
-                        +٨ مهن أخرى: خياط، حلاق، معلم خصوصي، صيدلاني، حارس أمن...
-                    </p>
-                    <Link to="/auth" style={{
-                        background: '#2563eb', color: 'white',
-                        padding: '14px 40px', borderRadius: 10,
-                        textDecoration: 'none', fontWeight: 700, fontSize: 17,
-                        display: 'inline-block',
-                    }}>سجّل وابدأ الآن مجاناً</Link>
                 </div>
             </section>
 
-            {/* ===== MAP PROMO ===== */}
-            <section style={{ padding: '80px 24px', maxWidth: 900, margin: '0 auto' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48, alignItems: 'center' }}>
+            <section className="landing-section">
+                <div className="landing-wrap landing-two-col">
                     <div>
-                        <div style={{
-                            background: '#eff6ff', borderRadius: 12,
-                            padding: '6px 16px', display: 'inline-block',
-                            marginBottom: 16, fontSize: 14, fontWeight: 600, color: '#2563eb',
-                        }}>
-                            📍 مبني على الخريطة
-                        </div>
-                        <h2 style={{ fontSize: 32, fontWeight: 900, lineHeight: 1.3, marginBottom: 16 }}>
-                            اعثر على ما تحتاجه<br />في قريتك مباشرة
-                        </h2>
-                        <p style={{ color: '#6b7280', fontSize: 16, lineHeight: 1.8, marginBottom: 20 }}>
-                            لا تحتاج للسفر أو السؤال. شغلي تُظهر لك على خريطة تفاعلية جميع العمّال المتاحين في قريتك، ناحيتك، أو منطقتك — كل شيء بدقة وسرعة.
-                        </p>
-                        <ul style={{ color: '#374151', fontSize: 15, lineHeight: 2, paddingRight: 20 }}>
-                            <li>✅ خريطة تفاعلية مثل Snapchat</li>
-                            <li>✅ بحث حسب القرية أو المنطقة أو المحافظة</li>
-                            <li>✅ رقم الهاتف مباشرة أو طلب اتصال</li>
-                            <li>✅ يعمل على الجوال بالكامل</li>
+                        <h2>اعثر على ما تحتاجه في قريتك مباشرة</h2>
+                        <p>بحث بالموقع الجغرافي عبر القرية والناحية والمنطقة مع نتائج واضحة وسريعة.</p>
+                        <ul className="landing-checks">
+                            <li>خريطة تفاعلية</li>
+                            <li>نطاق بحث مرن</li>
+                            <li>رقم مباشر أو طلب اتصال</li>
+                            <li>مصمم للجوال أولاً</li>
                         </ul>
-                        <Link to="/auth" style={{
-                            display: 'inline-block', marginTop: 28,
-                            background: '#2563eb', color: 'white',
-                            padding: '14px 32px', borderRadius: 10,
-                            textDecoration: 'none', fontWeight: 700, fontSize: 16,
-                        }}>جرّب الخريطة الآن</Link>
                     </div>
-                    <div style={{ position: 'relative' }}>
-                        <img
-                            src={IMAGES.map}
-                            alt="واجهة الخريطة في شغلي لإظهار العمال القريبين من المستخدم"
-                            style={{
-                                width: '100%', height: 520, objectFit: 'cover', display: 'block',
-                                borderRadius: 24, boxShadow: '0 18px 40px rgba(15, 23, 42, 0.16)',
-                            }}
-                        />
-                        <div style={{
-                            position: 'absolute', top: 18, left: 18,
-                            background: 'rgba(255,255,255,0.96)', borderRadius: 16,
-                            padding: '12px 16px', minWidth: 190,
-                            boxShadow: '0 10px 26px rgba(0,0,0,0.12)',
-                        }}>
-                            <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 6 }}>خريطة سوريا التفاعلية</div>
-                            <div style={{ fontWeight: 900, color: '#1e40af', fontSize: 22 }}>٢٦ محافظة</div>
-                            <div style={{ fontSize: 14, color: '#374151', marginTop: 4 }}>مئات القرى والنواحي ضمن نطاق البحث</div>
-                        </div>
-                        <div style={{
-                            position: 'absolute', right: 18, bottom: 18,
-                            background: 'rgba(17,24,39,0.84)', color: 'white',
-                            borderRadius: 16, padding: '14px 16px', width: 220,
-                            backdropFilter: 'blur(6px)',
-                        }}>
-                            <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 8 }}>عمّال قريبون منك الآن</div>
-                            {['كهربائي - ٢.٣ كم', 'سباك - ٤.١ كم', 'طبيب - ٦.٨ كم'].map(w => (
-                                <div key={w} style={{
-                                    display: 'flex', alignItems: 'center', gap: 8,
-                                    padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.08)',
-                                    fontSize: 14,
-                                }}>
-                                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e' }} />
-                                    {w}
-                                </div>
-                            ))}
-                        </div>
+                    <div className="landing-media-card">
+                        <img src={IMAGES.map} alt="واجهة الخريطة في شغلي" />
                     </div>
                 </div>
             </section>
 
-            {/* ===== ABOUT ===== */}
-            <section id="about" style={{ background: '#111827', color: 'white', padding: '80px 24px' }}>
-                <div style={{
-                    maxWidth: 1100, margin: '0 auto',
-                    display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                    gap: 36, alignItems: 'center',
-                }}>
+            <section id="about" className="landing-section dark">
+                <div className="landing-wrap landing-two-col">
                     <div>
-                        <div style={{ marginBottom: 20 }}><SyriaFlag size={48} /></div>
-                        <h2 style={{ fontSize: 34, fontWeight: 900, marginBottom: 20 }}>من نحن</h2>
-                        <p style={{ fontSize: 17, lineHeight: 1.9, color: '#d1d5db', marginBottom: 24 }}>
-                            شغلي هي منصة رقمية سورية تهدف إلى تقريب المسافة بين العمّال وأصحاب العمل. نؤمن أن كل شخص يستحق أن يجد عملاً كريماً بالقرب من منزله، وأن كل صاحب عمل يستطيع إيجاد الكفاءة التي يحتاجها في محيطه مباشرة.
+                        <SyriaFlag size={40} />
+                        <h2>من نحن</h2>
+                        <p>
+                            شغلي منصة رقمية سورية تهدف إلى تقريب المسافة بين العمّال وأصحاب العمل.
+                            نركز على البساطة والوضوح وتجربة عربية مناسبة للواقع المحلي.
                         </p>
-                        <p style={{ fontSize: 17, lineHeight: 1.9, color: '#d1d5db', marginBottom: 32 }}>
-                            أُسّست المنصة بهدف خدمة المناطق التي تفتقر إلى فرص العمل الرقمية، مع التركيز على البساطة واللغة العربية وسهولة الاستخدام للجميع.
-                        </p>
-                        <Link to="/auth" style={{
-                            background: '#2563eb', color: 'white',
-                            padding: '16px 48px', borderRadius: 12,
-                            textDecoration: 'none', fontWeight: 800, fontSize: 18,
-                            display: 'inline-block',
-                        }}>انضم إلى شغلي مجاناً</Link>
+                        <Link to="/auth" className="landing-btn landing-btn-solid">انضم إلى شغلي مجاناً</Link>
                     </div>
-                    <div style={{ position: 'relative' }}>
-                        <img
-                            src={IMAGES.about}
-                            alt="صورة تعبّر عن مجتمع شغلي وقرب فرص العمل من الناس"
-                            style={{ width: '100%', height: 420, objectFit: 'cover', borderRadius: 24, display: 'block' }}
-                        />
-                        <div style={{
-                            position: 'absolute', bottom: 18, right: 18,
-                            background: 'rgba(17,24,39,0.82)', border: '1px solid rgba(255,255,255,0.08)',
-                            borderRadius: 18, padding: '16px 18px', maxWidth: 240,
-                            backdropFilter: 'blur(6px)',
-                        }}>
-                            <div style={{ fontSize: 13, color: '#93c5fd', marginBottom: 6 }}>رؤية المنصة</div>
-                            <div style={{ fontWeight: 800, marginBottom: 6 }}>تقريب الفرصة من الناس</div>
-                            <div style={{ fontSize: 14, lineHeight: 1.7, color: '#d1d5db' }}>منصة عملية وسريعة تحترم الواقع المحلي وتبني الثقة بالوضوح والقرب.</div>
-                        </div>
+                    <div className="landing-media-card">
+                        <img src={IMAGES.about} alt="صورة تعبّر عن مجتمع شغلي" />
                     </div>
                 </div>
             </section>
 
-            <section id="news" style={{ padding: '80px 24px', maxWidth: 900, margin: '0 auto' }}>
-                <div style={{ textAlign: 'center', marginBottom: 48 }}>
-                    <h2 style={{ fontSize: 34, fontWeight: 900, marginBottom: 12 }}>آخر الأخبار والإعلانات</h2>
-                    <p style={{ color: '#6b7280', fontSize: 17 }}>ابقَ على اطلاع بآخر تطورات المنصة</p>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
-                    {NEWS.map((n) => (
-                        <div key={n.title} style={{
-                            background: 'white', borderRadius: 16, padding: '28px',
-                            boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
-                            border: '1px solid #e5e7eb',
-                        }}>
-                            <div style={{
-                                fontSize: 13, color: '#2563eb', fontWeight: 700,
-                                marginBottom: 12, background: '#eff6ff',
-                                display: 'inline-block', padding: '3px 12px', borderRadius: 20,
-                            }}>
-                                {n.date}
-                            </div>
-                            <h3 style={{ fontSize: 17, fontWeight: 800, marginBottom: 10, lineHeight: 1.4 }}>{n.title}</h3>
-                            <p style={{ color: '#6b7280', fontSize: 14, lineHeight: 1.7 }}>{n.body}</p>
-                        </div>
-                    ))}
+            <section id="news" className="landing-section">
+                <div className="landing-wrap">
+                    <div className="landing-head">
+                        <h2>آخر الأخبار والإعلانات</h2>
+                        <p>ابقَ على اطلاع بآخر تطورات المنصة</p>
+                    </div>
+                    <div className="landing-news-grid">
+                        {NEWS.map((n) => (
+                            <article key={n.title} className="landing-news-card">
+                                <small>{n.date}</small>
+                                <h3>{n.title}</h3>
+                                <p>{n.body}</p>
+                            </article>
+                        ))}
+                    </div>
                 </div>
             </section>
 
-            {/* ===== CTA BAND ===== */}
-            <section style={{
-                background: 'linear-gradient(135deg, #1e40af, #2563eb)',
-                color: 'white', padding: '72px 24px', textAlign: 'center',
-            }}>
-                <h2 style={{ fontSize: 38, fontWeight: 900, marginBottom: 16 }}>جاهز للبدء؟</h2>
-                <p style={{ fontSize: 18, opacity: 0.9, marginBottom: 40, maxWidth: 500, margin: '0 auto 40px' }}>
-                    سجّل الآن مجاناً وابدأ في إيجاد عمل أو توظيف عمّال في منطقتك
-                </p>
-                <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-                    <Link to="/auth" style={{
-                        background: 'white', color: '#1e40af',
-                        padding: '16px 48px', borderRadius: 12,
-                        textDecoration: 'none', fontWeight: 800, fontSize: 18,
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
-                    }}>سجّل كعامل</Link>
-                    <Link to="/auth" style={{
-                        background: 'rgba(255,255,255,0.15)', color: 'white',
-                        padding: '16px 48px', borderRadius: 12,
-                        textDecoration: 'none', fontWeight: 800, fontSize: 18,
-                        border: '2px solid rgba(255,255,255,0.5)',
-                    }}>سجّل كصاحب عمل</Link>
+            <section className="landing-cta-band">
+                <div className="landing-wrap landing-head">
+                    <h2>جاهز للبدء؟</h2>
+                    <p>سجّل الآن مجاناً وابدأ في إيجاد عمل أو توظيف عمّال في منطقتك</p>
+                    <div className="landing-actions">
+                        <Link to="/auth" className="landing-btn landing-btn-solid">سجّل كعامل</Link>
+                        <Link to="/auth" className="landing-btn landing-btn-glass">سجّل كصاحب عمل</Link>
+                    </div>
                 </div>
             </section>
 
-            {/* ===== CONTACT ===== */}
-            <section id="contact" style={{ padding: '80px 24px', background: '#f8faff' }}>
-                <div style={{
-                    maxWidth: 1080, margin: '0 auto',
-                    display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                    gap: 32, alignItems: 'center',
-                }}>
-                    <div style={{ position: 'relative' }}>
-                        <img
-                            src={IMAGES.contact}
-                            alt="صورة تمثل التواصل والدعم في منصة شغلي"
-                            style={{ width: '100%', height: 420, objectFit: 'cover', borderRadius: 24, display: 'block' }}
-                        />
-                        <div style={{
-                            position: 'absolute', inset: 'auto 18px 18px 18px',
-                            background: 'rgba(255,255,255,0.94)', borderRadius: 18,
-                            padding: '14px 16px', boxShadow: '0 12px 30px rgba(0,0,0,0.12)',
-                        }}>
-                            <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 4 }}>دعم واستفسارات</div>
-                            <div style={{ fontWeight: 800, color: '#111827', marginBottom: 6 }}>نرد على الاقتراحات والأسئلة المتعلقة بالمنصة</div>
-                            <div style={{ fontSize: 14, color: '#374151' }}>التواصل المباشر يساعدنا على تطوير شغلي بما يناسب المستخدمين في سوريا.</div>
-                        </div>
+            <section id="contact" className="landing-section alt">
+                <div className="landing-wrap landing-two-col">
+                    <div className="landing-media-card">
+                        <img src={IMAGES.contact} alt="صورة تمثل التواصل والدعم في منصة شغلي" />
                     </div>
                     <div>
-                        <h2 style={{ fontSize: 34, fontWeight: 900, marginBottom: 12 }}>تواصل معنا</h2>
-                        <p style={{ color: '#6b7280', fontSize: 17, marginBottom: 32 }}>
-                            لديك سؤال أو اقتراح؟ يسعدنا سماعك
-                        </p>
-                        <div style={{ display: 'flex', gap: 24, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
-                            {[
-                                { icon: '📧', label: 'البريد الإلكتروني', value: 'alshraky3@gmail.com' },
-                                { icon: '📱', label: 'واتساب', value: '+963 XXX XXX XXX' },
-                            ].map(c => (
-                                <div key={c.label} style={{
-                                    background: 'white', borderRadius: 14, padding: '24px 32px',
-                                    border: '1px solid #e5e7eb', boxShadow: '0 10px 24px rgba(0,0,0,0.06)',
-                                    flex: 1, minWidth: 220,
-                                }}>
-                                    <div style={{ fontSize: 32, marginBottom: 8 }}>{c.icon}</div>
-                                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{c.label}</div>
-                                    <div style={{ color: '#2563eb', fontSize: 14, direction: 'ltr' }}>{c.value}</div>
-                                </div>
-                            ))}
+                        <h2>تواصل معنا</h2>
+                        <p>لديك سؤال أو اقتراح؟ يسعدنا سماعك</p>
+                        <div className="landing-contact-grid">
+                            <article>
+                                <strong>📧 البريد الإلكتروني</strong>
+                                <span>alshraky3@gmail.com</span>
+                            </article>
+                            <article>
+                                <strong>📱 واتساب</strong>
+                                <span>+963 XXX XXX XXX</span>
+                            </article>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* ===== FOOTER ===== */}
-            <footer style={{ background: '#111827', color: '#9ca3af', padding: '32px 24px', textAlign: 'center' }}>
-                <div style={{ fontSize: 24, fontWeight: 900, color: 'white', marginBottom: 12 }}>شغلي</div>
-                <p style={{ fontSize: 14, marginBottom: 8 }}>
-                    © ٢٠٢٦ شغلي. مصنوع بـ ❤️ لسوريا
-                </p>
-                <p style={{ fontSize: 13 }}>متاح حالياً في سوريا فقط</p>
+            <footer className="landing-footer">
+                <div className="landing-logo-wrap landing-logo-wrap-footer">
+                    <img src={IMAGES.logo} alt="شعار شغلي" className="landing-logo-img" />
+                </div>
+                <p>© ٢٠٢٦ شغلي. مصنوع بـ ❤️ لسوريا</p>
+                <p>متاح حالياً في سوريا فقط</p>
             </footer>
-        </div >
+        </div>
     );
 }

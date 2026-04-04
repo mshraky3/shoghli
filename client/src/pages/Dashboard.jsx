@@ -188,7 +188,9 @@ export default function Dashboard() {
             {/* Header */}
             <header className="dash-header">
                 <div className="dash-header-top">
-                    <h1 className="dash-logo">شغلي</h1>
+                    <div className="dash-logo-wrap">
+                        <img src="/imges/logo.ico" alt="شعار شغلي" className="dash-logo-img" />
+                    </div>
                     <div className="dash-header-actions">
                         {user?.role === 'worker' && (
                             <button onClick={toggleAvailability}

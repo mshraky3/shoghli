@@ -604,6 +604,20 @@ body {
     letter-spacing: 0.2px;
 }
 
+.dash-logo-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dash-logo-img {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    object-fit: cover;
+    display: block;
+}
+
 .dash-header-actions {
     display: flex;
     align-items: center;
