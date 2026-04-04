@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import SyriaFlag from '../components/SyriaFlag';
 
 const JOBS = [
     { icon: '⚡', label: 'كهربائي' },
@@ -95,7 +96,7 @@ export default function LandingPage() {
                             borderRadius: 50, padding: '6px 20px', marginBottom: 20,
                             fontSize: 14, fontWeight: 600, backdropFilter: 'blur(4px)',
                         }}>
-                            🇸🇾 متاح الآن في سوريا فقط
+                            <SyriaFlag size={18} style={{ marginLeft: 6, verticalAlign: 'middle' }} /> متاح الآن في سوريا فقط
                         </div>
                         <h1 style={{ fontSize: 52, fontWeight: 900, lineHeight: 1.15, marginBottom: 20 }}>
                             شغلي تربطك<br />بالفرصة الأقرب إليك
@@ -413,7 +414,7 @@ export default function LandingPage() {
                     gap: 36, alignItems: 'center',
                 }}>
                     <div>
-                        <div style={{ fontSize: 48, marginBottom: 20 }}>🇸🇾</div>
+                        <div style={{ marginBottom: 20 }}><SyriaFlag size={48} /></div>
                         <h2 style={{ fontSize: 34, fontWeight: 900, marginBottom: 20 }}>من نحن</h2>
                         <p style={{ fontSize: 17, lineHeight: 1.9, color: '#d1d5db', marginBottom: 24 }}>
                             شغلي هي منصة رقمية سورية تهدف إلى تقريب المسافة بين العمّال وأصحاب العمل. نؤمن أن كل شخص يستحق أن يجد عملاً كريماً بالقرب من منزله، وأن كل صاحب عمل يستطيع إيجاد الكفاءة التي يحتاجها في محيطه مباشرة.
