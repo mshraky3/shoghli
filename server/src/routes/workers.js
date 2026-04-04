@@ -16,7 +16,7 @@ const RADIUS_MAP = {
 // PUT /api/workers/profile — Update worker-specific profile
 router.put('/profile', auth, requireRole('worker'), async (req, res) => {
     try {
-        const { category_ids, experience_years, available_hours, available_from, available_to, search_radius, bio } = req.body;
+        const { category_ids, experience_years, available_hours, available_from, available_to, search_radius, bio, clinic_name, specialty, work_days } = req.body;
 
         const updates = [];
         const values = [];
@@ -49,6 +49,18 @@ router.put('/profile', auth, requireRole('worker'), async (req, res) => {
         if (bio !== undefined) {
             updates.push(`bio = $${i++}`);
             values.push(bio.substring(0, 500));
+        }
+        if (clinic_name !== undefined) {
+            updates.push(`clinic_name = $${i++}`);
+            values.push(clinic_name.substring(0, 150));
+        }
+        if (specialty !== undefined) {
+            updates.push(`specialty = $${i++}`);
+            values.push(specialty.substring(0, 150));
+        }
+        if (work_days !== undefined) {
+            updates.push(`work_days = $${i++}`);
+            values.push(work_days);
         }
 
         if (updates.length === 0) {
@@ -109,7 +121,7 @@ router.get('/nearby', auth, async (req, res) => {
 
         const { rows } = await query(
             `SELECT 
-        u.id, u.name, u.lat, u.lng, u.phone_visibility, u.is_active,
+        u.id, u.name, u.avatar_url, u.lat, u.lng, u.phone_visibility, u.is_active,
         u.governorate_id, u.district_id,
         g.name_ar as governorate_name, d.name_ar as district_name,
         wp.category_ids, wp.experience_years, wp.available_hours, wp.bio,

@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { query } = require('../db/pool');
 const { auth, requireRole } = require('../middleware/auth');
+const { moderateAndNormalizeAvatar } = require('../services/imageModeration');
 
 const router = express.Router();
 
@@ -108,6 +109,40 @@ router.put('/profile', auth, async (req, res) => {
     }
 });
 
+// PUT /api/users/avatar — Upload profile avatar (base64 data URL)
+router.put('/avatar', auth,
+    body('imageData').isString().isLength({ min: 50 }).withMessage('الصورة مطلوبة'),
+    async (req, res) => {
+        try {
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                return res.status(400).json({ errors: errors.array() });
+            }
+
+            const { imageData } = req.body;
+            const result = await moderateAndNormalizeAvatar(imageData);
+
+            if (!result.ok) {
+                return res.status(400).json({ error: result.error });
+            }
+
+            await query(
+                'UPDATE users SET avatar_url = $1, updated_at = NOW() WHERE id = $2',
+                [result.imageDataUrl, req.user.id]
+            );
+
+            res.json({
+                message: 'تم تحديث صورة الملف الشخصي',
+                avatar_url: result.imageDataUrl,
+                moderation: result.moderation,
+            });
+        } catch (err) {
+            console.error('update avatar error:', err);
+            res.status(500).json({ error: 'حدث خطأ في الخادم' });
+        }
+    }
+);
+
 // PUT /api/users/onboarding-complete
 router.put('/onboarding-complete', auth, async (req, res) => {
     try {
@@ -127,9 +162,11 @@ router.get('/:id', auth, async (req, res) => {
     try {
         const { rows } = await query(
             `SELECT u.id, u.name, u.role, u.lat, u.lng, u.phone_visibility, u.is_active,
-        u.governorate_id, u.district_id,
+        u.avatar_url,
+        u.governorate_id, u.district_id, u.avg_rating, u.rating_count,
         g.name_ar as governorate_name, d.name_ar as district_name,
         wp.category_ids, wp.experience_years, wp.available_hours, wp.bio,
+        wp.clinic_name, wp.specialty, wp.work_days,
         ep.company_name
        FROM users u
        LEFT JOIN governorates g ON u.governorate_id = g.id
@@ -155,6 +192,20 @@ router.get('/:id', auth, async (req, res) => {
         res.json({ user: profile });
     } catch (err) {
         console.error('get user error:', err);
+        res.status(500).json({ error: 'حدث خطأ في الخادم' });
+    }
+});
+
+// PUT /api/users/accept-terms
+router.put('/accept-terms', auth, async (req, res) => {
+    try {
+        await query(
+            'UPDATE users SET terms_accepted_at = NOW(), updated_at = NOW() WHERE id = $1',
+            [req.user.id]
+        );
+        res.json({ message: 'تم قبول الشروط والأحكام' });
+    } catch (err) {
+        console.error('accept terms error:', err);
         res.status(500).json({ error: 'حدث خطأ في الخادم' });
     }
 });

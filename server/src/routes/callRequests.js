@@ -101,7 +101,9 @@ router.get('/', auth, async (req, res) => {
         const { rows } = await query(
             `SELECT cr.*,
         fu.name as from_name, fu.phone_visibility as from_phone_vis,
-        tu.name as to_name, tu.phone_visibility as to_phone_vis
+        fu.avatar_url as from_avatar_url,
+        tu.name as to_name, tu.phone_visibility as to_phone_vis,
+        tu.avatar_url as to_avatar_url
        FROM call_requests cr
        JOIN users fu ON cr.from_user_id = fu.id
        JOIN users tu ON cr.to_user_id = tu.id

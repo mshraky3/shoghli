@@ -14,6 +14,8 @@ const callRequestRoutes = require('./routes/callRequests');
 const notificationRoutes = require('./routes/notifications');
 const locationRoutes = require('./routes/locations');
 const categoryRoutes = require('./routes/categories');
+const ratingRoutes = require('./routes/ratings');
+const reportRoutes = require('./routes/reports');
 
 const app = express();
 
@@ -44,7 +46,7 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Body parsing
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '4mb' }));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -55,6 +57,8 @@ app.use('/api/call-requests', callRequestRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/locations', locationRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/ratings', ratingRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Root + health check
 app.get('/', (req, res) => {
