@@ -103,7 +103,10 @@ router.get('/', auth, async (req, res) => {
         fu.name as from_name, fu.phone_visibility as from_phone_vis,
         fu.avatar_url as from_avatar_url,
         tu.name as to_name, tu.phone_visibility as to_phone_vis,
-        tu.avatar_url as to_avatar_url
+        tu.avatar_url as to_avatar_url,
+        CASE WHEN cr.status = 'accepted' THEN
+          CASE WHEN cr.from_user_id = $1 THEN tu.phone ELSE fu.phone END
+        END as revealed_phone
        FROM call_requests cr
        JOIN users fu ON cr.from_user_id = fu.id
        JOIN users tu ON cr.to_user_id = tu.id
@@ -113,17 +116,7 @@ router.get('/', auth, async (req, res) => {
             [req.user.id]
         );
 
-        // Only include phone numbers for accepted requests
-        const requests = rows.map(r => {
-            const req_item = { ...r };
-            if (r.status === 'accepted') {
-                // The requester can see the target's phone
-                // handled on accept
-            }
-            return req_item;
-        });
-
-        res.json({ requests });
+        res.json({ requests: rows });
     } catch (err) {
         console.error('list call requests error:', err);
         res.status(500).json({ error: 'حدث خطأ في الخادم' });
