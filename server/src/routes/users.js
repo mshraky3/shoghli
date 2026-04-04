@@ -160,6 +160,12 @@ router.put('/onboarding-complete', auth, async (req, res) => {
 // GET /api/users/:id — Public profile
 router.get('/:id', auth, async (req, res) => {
     try {
+        // Validate UUID format to prevent SQL errors
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(req.params.id)) {
+            return res.status(400).json({ error: 'معرف المستخدم غير صحيح' });
+        }
+
         const { rows } = await query(
             `SELECT u.id, u.name, u.role, u.lat, u.lng, u.phone_visibility, u.is_active,
         u.avatar_url,
