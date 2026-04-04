@@ -64,14 +64,29 @@ export default function UserProfilePage() {
 
             <div className="container">
                 <div className="card" style={{ textAlign: 'center', marginBottom: 16 }}>
-                    <div style={{
-                        width: 80, height: 80, borderRadius: '50%',
-                        background: 'var(--primary-light)', margin: '0 auto 12px',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 32, fontWeight: 700, color: 'var(--primary)',
-                    }}>
-                        {profile.name ? profile.name[0] : '؟'}
-                    </div>
+                    {profile.avatar_url ? (
+                        <img
+                            src={profile.avatar_url}
+                            alt={profile.name || 'المستخدم'}
+                            style={{
+                                width: 80,
+                                height: 80,
+                                borderRadius: '50%',
+                                objectFit: 'cover',
+                                margin: '0 auto 12px',
+                                display: 'block',
+                            }}
+                        />
+                    ) : (
+                        <div style={{
+                            width: 80, height: 80, borderRadius: '50%',
+                            background: 'var(--primary-light)', margin: '0 auto 12px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 32, fontWeight: 700, color: 'var(--primary)',
+                        }}>
+                            {profile.name ? profile.name[0] : '؟'}
+                        </div>
+                    )}
                     <h2 style={{ fontSize: 22, fontWeight: 700 }}>{profile.name || 'بدون اسم'}</h2>
 
                     {profile.phone && (

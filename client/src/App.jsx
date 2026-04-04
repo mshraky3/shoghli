@@ -11,6 +11,7 @@ import UserProfilePage from './pages/UserProfilePage';
 import NotificationsPage from './pages/NotificationsPage';
 import RequestsPage from './pages/RequestsPage';
 import NewJobPage from './pages/NewJobPage';
+import TermsPage from './pages/TermsPage';
 
 function ProtectedRoute({ children }) {
     const { user, loading } = useAuth();
@@ -58,6 +59,8 @@ function AppRoutes() {
             <Route path="/job/new" element={
                 <ProtectedRoute><NewJobPage /></ProtectedRoute>
             } />
+
+            <Route path="/terms" element={<TermsPage />} />
 
             <Route path="/" element={
                 user ? (

@@ -24,12 +24,6 @@ export default function EmployerOnboarding() {
         navigator.geolocation.getCurrentPosition(
             async (pos) => {
                 const { latitude, longitude } = pos.coords;
-                // Syria bounding box check
-                if (latitude < 32.3 || latitude > 37.4 || longitude < 35.5 || longitude > 42.5) {
-                    setError('موقعك خارج سوريا. هذه المنصة متاحة في سوريا فقط حالياً.');
-                    setLoading(false);
-                    return;
-                }
                 setLocation({ lat: latitude, lng: longitude });
                 try {
                     const { data } = await api.get(`/locations/reverse-geocode?lat=${latitude}&lng=${longitude}`);
@@ -97,11 +91,37 @@ export default function EmployerOnboarding() {
                                 {loading ? 'جاري تحديد الموقع...' : 'السماح بتحديد الموقع'}
                             </button>
                         ) : (
-                            <div className="card" style={{ textAlign: 'center', marginTop: 20 }}>
-                                <MapPin size={24} color="var(--success)" style={{ margin: '0 auto 8px' }} />
-                                <p style={{ fontWeight: 700, fontSize: 18 }}>{locationInfo?.district_name}</p>
-                                <p style={{ color: 'var(--gray-500)' }}>{locationInfo?.governorate_name}</p>
-                                <div className="badge badge-success" style={{ marginTop: 12 }}>تم تحديد الموقع ✓</div>
+                            <div className="card" style={{ marginTop: 20, padding: '14px 18px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, justifyContent: 'center' }}>
+                                    <MapPin size={18} color="var(--success)" />
+                                    <span className="badge badge-success">تم تحديد الموقع ✓</span>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    {locationInfo?.village_name && (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>القرية</span>
+                                            <span style={{ fontWeight: 700, fontSize: 15 }}>{locationInfo.village_name}</span>
+                                        </div>
+                                    )}
+                                    {locationInfo?.subdistrict_name && (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>الناحية</span>
+                                            <span style={{ fontSize: 14 }}>{locationInfo.subdistrict_name}</span>
+                                        </div>
+                                    )}
+                                    {locationInfo?.district_name && (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>المنطقة</span>
+                                            <span style={{ fontSize: 14 }}>{locationInfo.district_name}</span>
+                                        </div>
+                                    )}
+                                    {locationInfo?.governorate_name && (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>المحافظة</span>
+                                            <span style={{ fontSize: 14 }}>{locationInfo.governorate_name}</span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>

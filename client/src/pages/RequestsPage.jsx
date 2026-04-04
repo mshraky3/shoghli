@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import { ArrowRight, Phone, Check, X } from 'lucide-react';
+import BottomNav from '../components/BottomNav';
+import { Phone, Check, X, PhoneIncoming, PhoneOutgoing, Clock, CheckCircle, XCircle, Star } from 'lucide-react';
 
 export default function RequestsPage() {
     const { user } = useAuth();
-    const navigate = useNavigate();
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [tab, setTab] = useState('incoming');
+    const [ratingTarget, setRatingTarget] = useState(null);
+    const [ratingScore, setRatingScore] = useState(0);
+    const [ratingComment, setRatingComment] = useState('');
+    const [ratingLoading, setRatingLoading] = useState(false);
 
-    useEffect(() => {
-        loadRequests();
-    }, [tab]);
+    useEffect(() => { loadRequests(); }, [tab]);
 
     const loadRequests = async () => {
         setLoading(true);
@@ -30,7 +32,8 @@ export default function RequestsPage() {
     const acceptRequest = async (id) => {
         try {
             const { data } = await api.put(`/call-requests/${id}/accept`);
-            alert(data.phone ? `رقم الهاتف: ${data.phone}` : 'تم القبول');
+            if (data.phone) alert(`رقم الهاتف: ${data.phone}`);
+            else alert('تم القبول');
             loadRequests();
         } catch (err) {
             alert(err.response?.data?.error || 'حدث خطأ');
@@ -46,95 +49,164 @@ export default function RequestsPage() {
         }
     };
 
-    const getStatusBadge = (status) => {
-        const map = {
-            pending: { class: 'badge-primary', label: 'قيد الانتظار' },
-            accepted: { class: 'badge-success', label: 'مقبول' },
-            rejected: { class: 'badge-danger', label: 'مرفوض' },
-        };
-        const m = map[status] || map.pending;
-        return <span className={`badge ${m.class}`}>{m.label}</span>;
+    const submitRating = async () => {
+        if (!ratingScore) return;
+        setRatingLoading(true);
+        try {
+            await api.post('/ratings', {
+                to_user_id: ratingTarget.userId,
+                call_request_id: ratingTarget.requestId,
+                score: ratingScore,
+                comment: ratingComment || undefined,
+            });
+            setRatingTarget(null);
+            setRatingScore(0);
+            setRatingComment('');
+            alert('شكراً لتقييمك!');
+        } catch (err) {
+            alert(err.response?.data?.error || 'حدث خطأ');
+        } finally {
+            setRatingLoading(false);
+        }
+    };
+
+    const getTimeAgo = (date) => {
+        const diff = Date.now() - new Date(date).getTime();
+        const minutes = Math.floor(diff / 60000);
+        if (minutes < 1) return 'الآن';
+        if (minutes < 60) return `منذ ${minutes} د`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `منذ ${hours} س`;
+        const days = Math.floor(hours / 24);
+        return `منذ ${days} ي`;
+    };
+
+    const statusConfig = {
+        pending: { icon: Clock, color: 'var(--primary)', bg: 'var(--primary-light)', label: 'قيد الانتظار' },
+        accepted: { icon: CheckCircle, color: 'var(--success)', bg: '#dcfce7', label: 'مقبول' },
+        rejected: { icon: XCircle, color: 'var(--danger)', bg: '#fee2e2', label: 'مرفوض' },
     };
 
     return (
-        <div className="page" style={{ paddingBottom: 70 }}>
-            <div style={{
-                background: 'white', padding: '12px 16px',
-                display: 'flex', alignItems: 'center', gap: 12,
-                borderBottom: '1px solid var(--gray-200)',
-            }}>
-                <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                    <ArrowRight size={22} />
-                </button>
-                <h1 style={{ fontSize: 18, fontWeight: 700 }}>طلبات الاتصال</h1>
-            </div>
+        <div className="dash-page">
+            <header className="page-header">
+                <h1>طلبات الاتصال</h1>
+            </header>
 
             {/* Tabs */}
-            <div style={{
-                display: 'flex', background: 'white',
-                borderBottom: '1px solid var(--gray-200)',
-            }}>
-                {['incoming', 'outgoing'].map(t => (
-                    <button
-                        key={t}
-                        onClick={() => setTab(t)}
-                        style={{
-                            flex: 1, padding: '12px', border: 'none', background: 'none',
-                            fontFamily: 'Tajawal', fontSize: 15, fontWeight: tab === t ? 700 : 400,
-                            color: tab === t ? 'var(--primary)' : 'var(--gray-500)',
-                            borderBottom: tab === t ? '3px solid var(--primary)' : '3px solid transparent',
-                            cursor: 'pointer',
-                        }}
-                    >
-                        {t === 'incoming' ? 'الواردة' : 'الصادرة'}
-                    </button>
-                ))}
+            <div className="req-tabs">
+                <button className={`req-tab ${tab === 'incoming' ? 'active' : ''}`}
+                    onClick={() => setTab('incoming')}>
+                    <PhoneIncoming size={16} /> الواردة
+                </button>
+                <button className={`req-tab ${tab === 'outgoing' ? 'active' : ''}`}
+                    onClick={() => setTab('outgoing')}>
+                    <PhoneOutgoing size={16} /> الصادرة
+                </button>
             </div>
 
-            <div className="container">
-                {loading && <div style={{ textAlign: 'center', padding: 40 }}><div className="spinner" style={{ margin: '0 auto' }} /></div>}
+            <main className="page-content">
+                {loading && <div className="dash-loading"><div className="spinner" /></div>}
 
                 {!loading && requests.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: 60, color: 'var(--gray-400)' }}>
-                        <Phone size={48} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
-                        <p>لا توجد طلبات</p>
+                    <div className="dash-empty">
+                        <Phone size={48} strokeWidth={1.2} />
+                        <p>{tab === 'incoming' ? 'لا توجد طلبات واردة' : 'لا توجد طلبات صادرة'}</p>
+                        <span>ستظهر هنا عند وجود طلبات جديدة</span>
                     </div>
                 )}
 
-                {requests.map(r => (
-                    <div key={r.id} className="card" style={{ marginBottom: 12 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                            <strong style={{ fontSize: 15 }}>
-                                {tab === 'incoming' ? (r.from_name || 'مستخدم') : (r.to_name || 'مستخدم')}
-                            </strong>
-                            {getStatusBadge(r.status)}
+                <div className="req-list">
+                    {requests.map(r => {
+                        const sc = statusConfig[r.status] || statusConfig.pending;
+                        const StatusIcon = sc.icon;
+                        const otherName = tab === 'incoming' ? (r.from_name || 'مستخدم') : (r.to_name || 'مستخدم');
+                        const otherUserId = tab === 'incoming' ? r.from_user_id : r.to_user_id;
+                        const otherAvatar = tab === 'incoming' ? r.from_avatar_url : r.to_avatar_url;
+
+                        return (
+                            <div key={r.id} className="req-card">
+                                <div className="req-card-top">
+                                    <Link to={`/profile/${otherUserId}`} className="req-card-user">
+                                        <div className="req-avatar">
+                                            {otherAvatar ? (
+                                                <img src={otherAvatar} alt={otherName} className="avatar-img-cover" />
+                                            ) : (
+                                                otherName[0]
+                                            )}
+                                        </div>
+                                        <div className="req-user-info">
+                                            <span className="req-user-name">{otherName}</span>
+                                            <span className="req-time">{getTimeAgo(r.created_at)}</span>
+                                        </div>
+                                    </Link>
+                                    <div className="req-status" style={{ background: sc.bg, color: sc.color }}>
+                                        <StatusIcon size={13} />
+                                        {sc.label}
+                                    </div>
+                                </div>
+
+                                {r.message && <p className="req-message">{r.message}</p>}
+
+                                {/* Accepted → phone */}
+                                {r.status === 'accepted' && r.data?.phone && (
+                                    <a href={`tel:${r.data.phone}`} className="req-phone-banner">
+                                        <Phone size={16} />
+                                        <span style={{ direction: 'ltr' }}>{r.data.phone}</span>
+                                    </a>
+                                )}
+
+                                {/* Pending incoming → actions */}
+                                {tab === 'incoming' && r.status === 'pending' && (
+                                    <div className="req-actions">
+                                        <button onClick={() => acceptRequest(r.id)} className="req-btn accept">
+                                            <Check size={18} /> قبول
+                                        </button>
+                                        <button onClick={() => rejectRequest(r.id)} className="req-btn reject">
+                                            <X size={18} /> رفض
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Rate button for accepted requests */}
+                                {r.status === 'accepted' && (
+                                    <button className="req-rate-btn"
+                                        onClick={() => setRatingTarget({ userId: otherUserId, requestId: r.id, name: otherName })}>
+                                        <Star size={14} /> قيّم {otherName}
+                                    </button>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </main>
+
+            {/* Rating modal */}
+            {ratingTarget && (
+                <div className="modal-overlay" onClick={() => setRatingTarget(null)}>
+                    <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+                        <div className="modal-handle" />
+                        <h3 className="modal-title">تقييم {ratingTarget.name}</h3>
+                        <div className="rating-stars-input">
+                            {[1, 2, 3, 4, 5].map(s => (
+                                <button key={s} onClick={() => setRatingScore(s)} className="rating-star-btn">
+                                    <Star size={36} fill={s <= ratingScore ? '#f59e0b' : 'none'}
+                                        color={s <= ratingScore ? '#f59e0b' : '#d1d5db'} />
+                                </button>
+                            ))}
                         </div>
-
-                        {r.message && <p style={{ color: 'var(--gray-600)', fontSize: 14, marginBottom: 8 }}>{r.message}</p>}
-
-                        {/* Pending incoming → show accept/reject */}
-                        {tab === 'incoming' && r.status === 'pending' && (
-                            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                                <button onClick={() => acceptRequest(r.id)} className="btn btn-success" style={{ flex: 1, padding: '8px', fontSize: 14 }}>
-                                    <Check size={16} /> قبول
-                                </button>
-                                <button onClick={() => rejectRequest(r.id)} className="btn btn-danger" style={{ flex: 1, padding: '8px', fontSize: 14 }}>
-                                    <X size={16} /> رفض
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Accepted → show phone if in data */}
-                        {r.status === 'accepted' && r.data?.phone && (
-                            <div style={{ marginTop: 8, padding: '8px 12px', background: '#f0fdf4', borderRadius: 8 }}>
-                                <a href={`tel:${r.data.phone}`} style={{ color: 'var(--success)', fontWeight: 700, direction: 'ltr', display: 'inline-block' }}>
-                                    📞 {r.data.phone}
-                                </a>
-                            </div>
-                        )}
+                        <textarea className="input" rows={3} placeholder="أضف تعليقاً (اختياري)"
+                            value={ratingComment} onChange={e => setRatingComment(e.target.value)}
+                            style={{ marginTop: 16, resize: 'none' }} />
+                        <button className="btn btn-primary btn-block" style={{ marginTop: 16 }}
+                            onClick={submitRating} disabled={!ratingScore || ratingLoading}>
+                            {ratingLoading ? 'جاري الإرسال...' : 'إرسال التقييم'}
+                        </button>
                     </div>
-                ))}
-            </div>
+                </div>
+            )}
+
+            <BottomNav />
         </div>
     );
 }
