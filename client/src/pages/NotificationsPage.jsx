@@ -4,9 +4,10 @@ import BottomNav from '../components/BottomNav';
 import { Bell, Phone, CheckCircle, Star, AlertTriangle, CheckCheck } from 'lucide-react';
 
 const NOTIF_ICONS = {
-    call_request: { icon: Phone, color: 'var(--primary)', bg: 'var(--primary-light)' },
-    call_accepted: { icon: CheckCircle, color: 'var(--success)', bg: '#dcfce7' },
-    rating: { icon: Star, color: '#f59e0b', bg: '#fef3c7' },
+    call_request_received: { icon: Phone, color: 'var(--primary)', bg: 'var(--primary-light)' },
+    call_request_accepted: { icon: CheckCircle, color: 'var(--success)', bg: '#dcfce7' },
+    call_request_rejected: { icon: AlertTriangle, color: 'var(--danger)', bg: '#fee2e2' },
+    rating_received: { icon: Star, color: '#f59e0b', bg: '#fef3c7' },
     report: { icon: AlertTriangle, color: 'var(--danger)', bg: '#fee2e2' },
     default: { icon: Bell, color: 'var(--gray-500)', bg: 'var(--gray-100)' },
 };

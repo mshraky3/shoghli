@@ -7,7 +7,7 @@ import api from '../services/api';
 import BottomNav from '../components/BottomNav';
 import {
     MapPin, Phone, PhoneForwarded, Search, List, Map as MapIcon,
-    Star, ChevronDown, Briefcase, Clock, Filter, X
+    Star, Briefcase, Clock, Navigation
 } from 'lucide-react';
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -56,19 +56,43 @@ export default function Dashboard() {
     const [viewMode, setViewMode] = useState('list');
     const [loading, setLoading] = useState(false);
     const [isAvailable, setIsAvailable] = useState(user?.is_active !== false);
-    const [showFilters, setShowFilters] = useState(false);
+    const [searchPoint, setSearchPoint] = useState(user?.lat && user?.lng ? { lat: user.lat, lng: user.lng } : null);
+    const [locationLabel, setLocationLabel] = useState('موقع غير محدد');
+    const [locating, setLocating] = useState(false);
 
-    const center = user?.lat && user?.lng ? [user.lat, user.lng] : SYRIA_CENTER;
+    const center = searchPoint ? [searchPoint.lat, searchPoint.lng] : SYRIA_CENTER;
+
+    const radiusOptions = [
+        { v: 'village', l: 'القرية', d: '~3كم' },
+        { v: 'subdistrict', l: 'الناحية', d: '~15كم' },
+        { v: 'district', l: 'المنطقة', d: '~40كم' },
+        { v: 'governorate', l: 'المحافظة', d: '~100كم' },
+    ];
+
+    const radiusMeta = radiusOptions.find(r => r.v === radius) || radiusOptions[2];
 
     useEffect(() => {
         api.get('/categories').then(({ data }) => setCategories(data.categories || [])).catch(() => { });
     }, []);
 
+    useEffect(() => {
+        if (!searchPoint) return;
+        api.get(`/locations/reverse-geocode?lat=${searchPoint.lat}&lng=${searchPoint.lng}`)
+            .then(({ data }) => {
+                const loc = data?.location || {};
+                const label = [loc.village_name, loc.subdistrict_name, loc.district_name, loc.governorate_name]
+                    .filter(Boolean)
+                    .join('، ');
+                setLocationLabel(label || 'سوريا');
+            })
+            .catch(() => setLocationLabel('سوريا'));
+    }, [searchPoint]);
+
     const searchWorkers = useCallback(async () => {
-        if (!user?.lat || !user?.lng) return;
+        if (!searchPoint?.lat || !searchPoint?.lng) return;
         setLoading(true);
         try {
-            const params = new URLSearchParams({ lat: user.lat, lng: user.lng, radius });
+            const params = new URLSearchParams({ lat: searchPoint.lat, lng: searchPoint.lng, radius });
             if (selectedCategory) params.append('category_id', selectedCategory);
             const { data } = await api.get(`/workers/nearby?${params}`);
             setWorkers(data.workers);
@@ -77,11 +101,35 @@ export default function Dashboard() {
         } finally {
             setLoading(false);
         }
-    }, [user, radius, selectedCategory]);
+    }, [searchPoint, radius, selectedCategory]);
 
     useEffect(() => {
         if (user?.role === 'employer') searchWorkers();
     }, [searchWorkers, user?.role]);
+
+    const refreshSearchLocation = () => {
+        if (!navigator.geolocation) return;
+
+        setLocating(true);
+        navigator.geolocation.getCurrentPosition(
+            async ({ coords }) => {
+                const nextPoint = { lat: coords.latitude, lng: coords.longitude };
+                setSearchPoint(nextPoint);
+                try {
+                    await api.put('/users/location', {
+                        lat: nextPoint.lat,
+                        lng: nextPoint.lng,
+                    });
+                } catch (err) {
+                    console.error('Location update failed:', err);
+                } finally {
+                    setLocating(false);
+                }
+            },
+            () => setLocating(false),
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+    };
 
     const toggleAvailability = async () => {
         try {
@@ -163,10 +211,9 @@ export default function Dashboard() {
                             ))}
                         </div>
                         <div className="dash-toolbar">
-                            <button className="dash-filter-btn" onClick={() => setShowFilters(!showFilters)}>
-                                <Filter size={15} /> المسافة
-                                <ChevronDown size={14} style={{ transform: showFilters ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />
-                            </button>
+                            <div className="dash-filter-btn static">
+                                <MapPin size={14} /> {radiusMeta.l}
+                            </div>
                             <div className="dash-view-toggle">
                                 <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>
                                     <List size={16} />
@@ -176,23 +223,25 @@ export default function Dashboard() {
                                 </button>
                             </div>
                         </div>
-                        {showFilters && (
+                        <div className="dash-selection-panel">
+                            <div className="dash-selection-head">
+                                <span className="dash-selection-label">منطقة البحث:</span>
+                                <span className="dash-selection-value">{locationLabel}</span>
+                                <button className="dash-selection-refresh" onClick={refreshSearchLocation} disabled={locating}>
+                                    <Navigation size={13} /> {locating ? 'جاري التحديث...' : 'تحديث الموقع'}
+                                </button>
+                            </div>
                             <div className="dash-radius-bar">
-                                {[
-                                    { v: 'village', l: 'القرية', d: '~3كم' },
-                                    { v: 'subdistrict', l: 'الناحية', d: '~15كم' },
-                                    { v: 'district', l: 'المنطقة', d: '~40كم' },
-                                    { v: 'governorate', l: 'المحافظة', d: '~100كم' },
-                                ].map(r => (
+                                {radiusOptions.map(r => (
                                     <button key={r.v}
                                         className={`dash-radius-option ${radius === r.v ? 'active' : ''}`}
-                                        onClick={() => { setRadius(r.v); setShowFilters(false); }}>
+                                        onClick={() => setRadius(r.v)}>
                                         {r.l}
                                         <span className="dash-radius-desc">{r.d}</span>
                                     </button>
                                 ))}
                             </div>
-                        )}
+                        </div>
                     </>
                 )}
 

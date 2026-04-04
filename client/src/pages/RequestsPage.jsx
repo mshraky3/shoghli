@@ -17,6 +17,13 @@ export default function RequestsPage() {
 
     useEffect(() => { loadRequests(); }, [tab]);
 
+    // Auto-refresh every 15 seconds for incoming requests
+    useEffect(() => {
+        if (tab !== 'incoming') return;
+        const interval = setInterval(loadRequests, 15000);
+        return () => clearInterval(interval);
+    }, [tab]);
+
     const loadRequests = async () => {
         setLoading(true);
         try {
@@ -149,10 +156,10 @@ export default function RequestsPage() {
                                 {r.message && <p className="req-message">{r.message}</p>}
 
                                 {/* Accepted → phone */}
-                                {r.status === 'accepted' && r.data?.phone && (
-                                    <a href={`tel:${r.data.phone}`} className="req-phone-banner">
+                                {r.status === 'accepted' && r.revealed_phone && (
+                                    <a href={`tel:${r.revealed_phone}`} className="req-phone-banner">
                                         <Phone size={16} />
-                                        <span style={{ direction: 'ltr' }}>{r.data.phone}</span>
+                                        <span style={{ direction: 'ltr' }}>{r.revealed_phone}</span>
                                     </a>
                                 )}
 

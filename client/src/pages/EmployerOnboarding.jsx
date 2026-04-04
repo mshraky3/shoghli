@@ -1,8 +1,38 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { MapPin, User, ChevronLeft } from 'lucide-react';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
+
+function DraggableMarker({ position, onDragEnd }) {
+    const markerRef = useRef(null);
+    useMapEvents({});
+    return (
+        <Marker
+            position={position}
+            draggable={true}
+            ref={markerRef}
+            eventHandlers={{
+                dragend() {
+                    const marker = markerRef.current;
+                    if (marker) {
+                        const { lat, lng } = marker.getLatLng();
+                        onDragEnd(lat, lng);
+                    }
+                },
+            }}
+        />
+    );
+}
 
 export default function EmployerOnboarding() {
     const { refreshUser } = useAuth();
@@ -34,11 +64,21 @@ export default function EmployerOnboarding() {
                 setLoading(false);
             },
             () => {
-                setError('لم نتمكن من الحصول على موقعك.');
+                setError('لم نتمكن من الحصول على موقعك. تأكد من تفعيل خدمات الموقع.');
                 setLoading(false);
             },
             { enableHighAccuracy: true, timeout: 10000 }
         );
+    };
+
+    const handleMarkerDrag = async (lat, lng) => {
+        setLocation({ lat, lng });
+        try {
+            const { data } = await api.get(`/locations/reverse-geocode?lat=${lat}&lng=${lng}`);
+            setLocationInfo(data.location);
+        } catch {
+            setLocationInfo({ district_name: 'غير معروف', governorate_name: 'سوريا' });
+        }
     };
 
     const finishOnboarding = async () => {
@@ -80,8 +120,8 @@ export default function EmployerOnboarding() {
 
                 {step === 0 && (
                     <div style={{ textAlign: 'center' }}>
-                        <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#dcfce7', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <MapPin size={32} color="var(--success)" />
+                        <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--primary-light)', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <MapPin size={32} color="var(--primary)" />
                         </div>
                         <h2 className="onboarding-title">حدد موقعك</h2>
                         <p className="onboarding-subtitle">لنعرض لك العمّال القريبين منك</p>
@@ -91,36 +131,42 @@ export default function EmployerOnboarding() {
                                 {loading ? 'جاري تحديد الموقع...' : 'السماح بتحديد الموقع'}
                             </button>
                         ) : (
-                            <div className="card" style={{ marginTop: 20, padding: '14px 18px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, justifyContent: 'center' }}>
-                                    <MapPin size={18} color="var(--success)" />
-                                    <span className="badge badge-success">تم تحديد الموقع ✓</span>
+                            <div style={{ marginTop: 16 }}>
+                                <div style={{ height: 260, borderRadius: 12, overflow: 'hidden', border: '2px solid var(--gray-200)' }}>
+                                    <MapContainer center={[location.lat, location.lng]} zoom={13} style={{ height: '100%', width: '100%' }}>
+                                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                        <DraggableMarker position={[location.lat, location.lng]} onDragEnd={handleMarkerDrag} />
+                                    </MapContainer>
                                 </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                    {locationInfo?.village_name && (
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>القرية</span>
-                                            <span style={{ fontWeight: 700, fontSize: 15 }}>{locationInfo.village_name}</span>
-                                        </div>
-                                    )}
-                                    {locationInfo?.subdistrict_name && (
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>الناحية</span>
-                                            <span style={{ fontSize: 14 }}>{locationInfo.subdistrict_name}</span>
-                                        </div>
-                                    )}
-                                    {locationInfo?.district_name && (
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>المنطقة</span>
-                                            <span style={{ fontSize: 14 }}>{locationInfo.district_name}</span>
-                                        </div>
-                                    )}
-                                    {locationInfo?.governorate_name && (
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>المحافظة</span>
-                                            <span style={{ fontSize: 14 }}>{locationInfo.governorate_name}</span>
-                                        </div>
-                                    )}
+                                <div className="card" style={{ marginTop: 12, padding: '14px 18px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                        {locationInfo?.village_name && (
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>القرية</span>
+                                                <span style={{ fontWeight: 700, fontSize: 15 }}>{locationInfo.village_name}</span>
+                                            </div>
+                                        )}
+                                        {locationInfo?.subdistrict_name && (
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>الناحية</span>
+                                                <span style={{ fontSize: 14 }}>{locationInfo.subdistrict_name}</span>
+                                            </div>
+                                        )}
+                                        {locationInfo?.district_name && (
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>المنطقة</span>
+                                                <span style={{ fontSize: 14 }}>{locationInfo.district_name}</span>
+                                            </div>
+                                        )}
+                                        {locationInfo?.governorate_name && (
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>المحافظة</span>
+                                                <span style={{ fontSize: 14 }}>{locationInfo.governorate_name}</span>
+                                            </div>
+                                        )}
+                                        {!locationInfo && <p style={{ textAlign: 'center', color: 'var(--gray-400)', margin: 0 }}>جاري تحديد الموقع...</p>}
+                                    </div>
+                                    <p style={{ fontSize: 12, color: 'var(--gray-400)', marginTop: 10, textAlign: 'center' }}>📍 اسحب الدبوس لتعديل موقعك</p>
                                 </div>
                             </div>
                         )}
@@ -130,7 +176,7 @@ export default function EmployerOnboarding() {
                 {step === 1 && (
                     <div>
                         <div style={{ textAlign: 'center' }}>
-                            <User size={32} color="var(--success)" style={{ margin: '0 auto 12px' }} />
+                            <User size={32} color="var(--primary)" style={{ margin: '0 auto 12px' }} />
                             <h2 className="onboarding-title">معلوماتك</h2>
                             <p className="onboarding-subtitle">اختياري — يمكنك تعديلها لاحقاً</p>
                         </div>
