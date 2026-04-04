@@ -24,12 +24,18 @@ export default function UserProfilePage() {
         try {
             const { data } = await api.post('/call-requests', { to_user_id: id });
             if (data.direct) {
-                alert(`رقم الهاتف: ${data.phone}`);
-            } else {
-                alert('تم إرسال طلب الاتصال');
+                const callNow = confirm(`رقم الهاتف: ${data.phone}\n\nرقم الهاتف متاح مباشرة. هل تريد الاتصال الآن؟`);
+                if (callNow) window.location.href = `tel:${data.phone}`;
+            } else if (data.callRequest) {
+                alert('✓ تم إرسال طلب الاتصال بنجاح\nسيصل إشعار للعامل وسيظهر الطلب في صفحة الطلبات');
             }
         } catch (err) {
-            alert(err.response?.data?.error || 'حدث خطأ');
+            const rd = err.response?.data;
+            console.error('call-request error payload:', rd);
+            const msg = rd?.error
+                || (rd?.errors && rd.errors.map(e => e.msg).join(', '))
+                || 'حدث خطأ في إرسال الطلب';
+            alert(msg);
         }
     };
 

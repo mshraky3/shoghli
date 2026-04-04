@@ -7,7 +7,7 @@ import api from '../services/api';
 import BottomNav from '../components/BottomNav';
 import {
     MapPin, Phone, PhoneForwarded, Search, List, Map as MapIcon,
-    Star, Briefcase, Clock, Navigation
+    Star, Briefcase, Clock, Navigation, User, LocateFixed
 } from 'lucide-react';
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -145,12 +145,19 @@ export default function Dashboard() {
         try {
             const { data } = await api.post('/call-requests', { to_user_id: toUserId });
             if (data.direct) {
-                alert(`رقم الهاتف: ${data.phone}`);
-            } else {
-                alert('تم إرسال طلب الاتصال بنجاح');
+                // Phone is public — show directly, no request needed
+                const callNow = confirm(`رقم الهاتف: ${data.phone}\n\nرقم الهاتف متاح مباشرة. هل تريد الاتصال الآن؟`);
+                if (callNow) window.location.href = `tel:${data.phone}`;
+            } else if (data.callRequest) {
+                alert('✓ تم إرسال طلب الاتصال بنجاح\nسيصل إشعار للعامل وسيظهر الطلب في صفحة الطلبات');
             }
         } catch (err) {
-            alert(err.response?.data?.error || 'حدث خطأ');
+            const rd = err.response?.data;
+            console.error('call-request error payload:', rd);
+            const msg = rd?.error
+                || (rd?.errors && rd.errors.map(e => e.msg).join(', '))
+                || 'حدث خطأ في إرسال الطلب';
+            alert(msg);
         }
     };
 
@@ -194,7 +201,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Employer: Category scroll + filters */}
-                {user?.role === 'employer' && (
+                {user?.role === 'employer' && searchPoint && (
                     <>
                         <div className="dash-category-scroll">
                             <button
@@ -314,7 +321,7 @@ export default function Dashboard() {
                                         {w.avatar_url ? (
                                             <img src={w.avatar_url} alt={w.name || 'عامل'} className="avatar-img-cover" />
                                         ) : (
-                                            w.name ? w.name[0] : '؟'
+                                            <User size={22} strokeWidth={1.8} />
                                         )}
                                     </div>
                                     <div className="wcard-info">
@@ -392,6 +399,27 @@ export default function Dashboard() {
                     </div>
                 )}
             </main>
+
+            {/* Location required overlay for employers */}
+            {user?.role === 'employer' && !searchPoint && (
+                <div className="modal-overlay" style={{ alignItems: 'center' }}>
+                    <div className="dash-location-popup">
+                        <div className="dash-location-popup-icon">
+                            <LocateFixed size={48} strokeWidth={1.5} />
+                        </div>
+                        <h2>حدّد موقعك أولاً</h2>
+                        <p>لعرض العمّال القريبين منك، نحتاج الوصول إلى موقعك الحالي</p>
+                        <button
+                            className="btn btn-primary btn-lg btn-block"
+                            onClick={refreshSearchLocation}
+                            disabled={locating}
+                            style={{ marginTop: 8 }}>
+                            <Navigation size={18} />
+                            {locating ? 'جاري تحديد الموقع...' : 'تحديث الموقع'}
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <BottomNav />
         </div>

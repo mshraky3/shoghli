@@ -1000,8 +1000,8 @@ body {
 }
 
 .wcard-avatar {
-    width: 48px;
-    height: 48px;
+    width: 52px;
+    height: 52px;
     border-radius: 14px;
     background: linear-gradient(145deg, #dbeafe, #bfdbfe);
     color: #1e3a8a;
@@ -1011,6 +1011,46 @@ body {
     font-size: 18px;
     font-weight: 800;
     flex-shrink: 0;
+    overflow: hidden;
+}
+
+/* Location required popup */
+.dash-location-popup {
+    background: #fff;
+    border-radius: 24px;
+    padding: 36px 28px 28px;
+    margin: 16px;
+    max-width: 380px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+    animation: slideUp 0.22s ease;
+}
+
+.dash-location-popup-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #dbeafe, #bfdbfe);
+    color: #2563eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+
+.dash-location-popup h2 {
+    font-size: 20px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 8px;
+}
+
+.dash-location-popup p {
+    font-size: 14px;
+    color: #64748b;
+    margin: 0 0 20px;
+    line-height: 1.6;
 }
 
 .wcard-info {

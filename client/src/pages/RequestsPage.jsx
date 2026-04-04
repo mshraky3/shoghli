@@ -17,11 +17,23 @@ export default function RequestsPage() {
 
     useEffect(() => { loadRequests(); }, [tab]);
 
-    // Auto-refresh every 15 seconds for incoming requests
+    // Auto-refresh every 10 seconds
     useEffect(() => {
-        if (tab !== 'incoming') return;
-        const interval = setInterval(loadRequests, 15000);
+        const interval = setInterval(loadRequests, 10000);
         return () => clearInterval(interval);
+    }, [tab]);
+
+    // Refetch when user returns to this tab/window
+    useEffect(() => {
+        const onVisible = () => {
+            if (document.visibilityState === 'visible') loadRequests();
+        };
+        document.addEventListener('visibilitychange', onVisible);
+        window.addEventListener('focus', loadRequests);
+        return () => {
+            document.removeEventListener('visibilitychange', onVisible);
+            window.removeEventListener('focus', loadRequests);
+        };
     }, [tab]);
 
     const loadRequests = async () => {

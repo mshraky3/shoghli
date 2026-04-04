@@ -16,10 +16,30 @@ export default function NotificationsPage() {
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
+    const fetchNotifications = () => {
         api.get('/notifications').then(({ data }) => {
             setNotifications(data.notifications);
         }).catch(() => { }).finally(() => setLoading(false));
+    };
+
+    useEffect(() => {
+        fetchNotifications();
+        const interval = setInterval(fetchNotifications, 15000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // Refetch when user returns to this tab
+    useEffect(() => {
+        const onFocus = () => fetchNotifications();
+        const onVisible = () => {
+            if (document.visibilityState === 'visible') fetchNotifications();
+        };
+        window.addEventListener('focus', onFocus);
+        document.addEventListener('visibilitychange', onVisible);
+        return () => {
+            window.removeEventListener('focus', onFocus);
+            document.removeEventListener('visibilitychange', onVisible);
+        };
     }, []);
 
     const markRead = async (id) => {

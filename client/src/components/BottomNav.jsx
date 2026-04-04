@@ -8,17 +8,32 @@ export default function BottomNav() {
     const { user } = useAuth();
     const location = useLocation();
     const [unreadCount, setUnreadCount] = useState(0);
+    const [pendingRequests, setPendingRequests] = useState(0);
 
-    useEffect(() => {
+    const fetchBadges = () => {
         api.get('/notifications?unread=true')
             .then(({ data }) => setUnreadCount(data.unread_count))
             .catch(() => { });
-        const interval = setInterval(() => {
-            api.get('/notifications?unread=true')
-                .then(({ data }) => setUnreadCount(data.unread_count))
-                .catch(() => { });
-        }, 30000);
+        api.get('/call-requests?type=incoming')
+            .then(({ data }) => {
+                const pending = (data.requests || []).filter(r => r.status === 'pending').length;
+                setPendingRequests(pending);
+            })
+            .catch(() => { });
+    };
+
+    useEffect(() => {
+        fetchBadges();
+        const interval = setInterval(fetchBadges, 15000);
         return () => clearInterval(interval);
+    }, []);
+
+    useEffect(() => {
+        const onVisible = () => {
+            if (document.visibilityState === 'visible') fetchBadges();
+        };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => document.removeEventListener('visibilitychange', onVisible);
     }, []);
 
     const isActive = (path) => {
@@ -31,8 +46,8 @@ export default function BottomNav() {
 
     const items = [
         { path: '/dashboard', icon: Home, label: 'الرئيسية' },
+        { path: '/requests', icon: PhoneForwarded, label: 'الطلبات', badge: pendingRequests },
         ...(user?.role === 'employer' ? [{ path: '/job/new', icon: Plus, label: 'إعلان', fab: true }] : []),
-        { path: '/requests', icon: PhoneForwarded, label: 'الطلبات' },
         { path: '/notifications', icon: Bell, label: 'الإشعارات', badge: unreadCount },
         { path: '/profile', icon: User, label: 'حسابي' },
     ];
