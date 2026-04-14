@@ -116,6 +116,18 @@ async function seed() {
     try {
         await client.query('BEGIN');
 
+        // Seed admin
+        console.log('🌱 Seeding admin user...');
+        const bcrypt = require('bcryptjs');
+        const adminHash = await bcrypt.hash('admin1810', 10);
+        await client.query(
+            `INSERT INTO admins (username, password_hash) 
+             VALUES ($1, $2)
+             ON CONFLICT (username) DO UPDATE SET password_hash = $2`,
+            ['admin1810', adminHash]
+        );
+        console.log('✅ Admin user seeded');
+
         // Seed categories
         console.log('🌱 Seeding job categories...');
         for (const cat of categories) {

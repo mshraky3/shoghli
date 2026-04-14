@@ -1,17 +1,12 @@
-// Mock SMS provider for development
-// Replace with Twilio/MessageBird in production
-
 const sendSMS = async (phone, message) => {
-    if (process.env.SMS_PROVIDER === 'mock') {
-        console.log(`📱 [Mock SMS] To: ${phone} | Message: ${message}`);
-        return { success: true, provider: 'mock' };
+    const provider = process.env.SMS_PROVIDER || 'mock';
+
+    if (provider === 'mock' || provider === 'test') {
+        console.log(`📱 [${provider} SMS] To: ${phone} | Message: ${message}`);
+        return { success: true, provider };
     }
 
-    // Future: Twilio implementation
-    // const twilio = require('twilio')(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
-    // await twilio.messages.create({ body: message, to: phone, from: process.env.TWILIO_FROM });
-
-    throw new Error('SMS provider not configured');
+    throw new Error(`SMS provider "${provider}" is not supported. Use Firebase for authentication and keep SMS_PROVIDER as mock or test.`);
 };
 
 module.exports = { sendSMS };

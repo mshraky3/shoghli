@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const { query } = require('../db/pool');
 const { sendSMS } = require('../services/sms');
+const { verifyFirebaseToken } = require('../services/firebaseAdmin');
 const { auth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -20,12 +21,12 @@ const checkOTPRateLimit = async (phone) => {
      WHERE phone = $1 AND created_at > NOW() - INTERVAL '1 hour'`,
         [phone]
     );
-    return parseInt(rows[0].count) < 3;
+    return parseInt(rows[0].count) < 6;
 };
 
 // POST /api/auth/send-otp
 router.post('/send-otp',
-    body('phone').matches(/^\+963\d{8,9}$/).withMessage('رقم هاتف سوري غير صحيح'),
+    body('phone').matches(/^\+\d{7,15}$/).withMessage('رقم هاتف غير صحيح'),
     async (req, res) => {
         try {
             const errors = validationResult(req);
@@ -83,7 +84,7 @@ router.post('/send-otp',
 
 // POST /api/auth/verify-otp
 router.post('/verify-otp',
-    body('phone').matches(/^\+963\d{8,9}$/).withMessage('رقم هاتف سوري غير صحيح'),
+    body('phone').matches(/^\+\d{7,15}$/).withMessage('رقم هاتف غير صحيح'),
     body('code').isLength({ min: 6, max: 6 }).withMessage('رمز التحقق يجب أن يكون 6 أرقام'),
     async (req, res) => {
         try {
@@ -208,6 +209,82 @@ router.post('/refresh',
             res.json({ token });
         } catch (err) {
             return res.status(401).json({ error: 'رمز تجديد غير صحيح' });
+        }
+    }
+);
+
+// POST /api/auth/firebase-verify
+router.post('/firebase-verify',
+    body('idToken').notEmpty().withMessage('Firebase token is required'),
+    async (req, res) => {
+        try {
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                return res.status(400).json({ errors: errors.array() });
+            }
+
+            const { idToken } = req.body;
+
+            // Verify the Firebase ID token
+            const decoded = await verifyFirebaseToken(idToken);
+            const phone = decoded.phone_number;
+
+            if (!phone) {
+                return res.status(400).json({ error: 'رقم الهاتف غير موجود في التوكن' });
+            }
+
+            // Find or create user
+            let { rows: userRows } = await query(
+                'SELECT * FROM users WHERE phone = $1', [phone]
+            );
+
+            let isNewUser = false;
+            if (userRows.length === 0) {
+                isNewUser = true;
+                const { rows: newUser } = await query(
+                    'INSERT INTO users (phone) VALUES ($1) RETURNING *',
+                    [phone]
+                );
+                userRows = newUser;
+            }
+
+            const user = userRows[0];
+
+            // Generate JWT
+            const token = jwt.sign(
+                { userId: user.id },
+                process.env.JWT_SECRET,
+                { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+            );
+
+            const refreshToken = jwt.sign(
+                { userId: user.id, type: 'refresh' },
+                process.env.JWT_SECRET,
+                { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' }
+            );
+
+            res.json({
+                token,
+                refreshToken,
+                user: {
+                    id: user.id,
+                    phone: user.phone,
+                    role: user.role,
+                    name: user.name,
+                    avatar_url: user.avatar_url,
+                    onboarding_completed: user.onboarding_completed,
+                },
+                isNewUser,
+            });
+        } catch (err) {
+            console.error('firebase-verify error:', err);
+            if (err.code === 'auth/id-token-expired') {
+                return res.status(401).json({ error: 'انتهت صلاحية التوكن' });
+            }
+            if (err.code === 'auth/argument-error' || err.code === 'auth/id-token-revoked') {
+                return res.status(401).json({ error: 'توكن غير صالح' });
+            }
+            res.status(500).json({ error: 'حدث خطأ في الخادم' });
         }
     }
 );
