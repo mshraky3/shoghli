@@ -1,10 +1,9 @@
 import axios from 'axios';
 
-const rawApiUrl = (import.meta.env.VITE_API_URL || '/api').trim();
-const API_BASE_URL = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
+/* global __BACKEND_URL__ */
+const API_BASE_URL = import.meta.env.DEV ? '/api' : `${__BACKEND_URL__}/api`;
 
 console.log('[api] mode:', import.meta.env.MODE);
-console.log('[api] VITE_API_URL raw:', import.meta.env.VITE_API_URL);
 console.log('[api] baseURL:', API_BASE_URL);
 
 const api = axios.create({
@@ -66,4 +65,5 @@ api.interceptors.response.use(
     }
 );
 
+export { API_BASE_URL };
 export default api;

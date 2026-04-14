@@ -250,11 +250,11 @@ export default function LandingPage() {
                         <div className="landing-contact-grid">
                             <article>
                                 <strong>📧 البريد الإلكتروني</strong>
-                                <span>alshraky3@gmail.com</span>
+                                <a href="mailto:alshraky3@gmail.com">alshraky3@gmail.com</a>
                             </article>
                             <article>
                                 <strong>📱 واتساب</strong>
-                                <span>+963 XXX XXX XXX</span>
+                                <a href="https://wa.me/96362631081" target="_blank" rel="noreferrer">0096362631081</a>
                             </article>
                         </div>
                     </div>

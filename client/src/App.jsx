@@ -12,6 +12,7 @@ import NotificationsPage from './pages/NotificationsPage';
 import RequestsPage from './pages/RequestsPage';
 import NewJobPage from './pages/NewJobPage';
 import TermsPage from './pages/TermsPage';
+import AdminDashboard from './pages/AdminDashboard';
 
 function ProtectedRoute({ children }) {
     const { user, loading } = useAuth();
@@ -70,6 +71,7 @@ function AppRoutes() {
                 ) : <LandingPage />
             } />
 
+            <Route path="/admin" element={<AdminDashboard />} />
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );
@@ -77,7 +79,7 @@ function AppRoutes() {
 
 export default function App() {
     return (
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <AuthProvider>
                 <AppRoutes />
             </AuthProvider>

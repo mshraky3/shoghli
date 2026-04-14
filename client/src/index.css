@@ -1655,14 +1655,14 @@ body {
 }
 
 .prof-logout {
-    width: calc(100% - 24px);
-    margin: 0 12px 12px;
+    width: min(calc(100% - 24px), 640px);
+    margin: 0 auto 12px;
     height: 44px;
     border: 1px solid #fca5a5;
     border-radius: 12px;
     background: #fff1f2;
     color: #be123c;
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;

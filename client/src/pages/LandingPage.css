@@ -505,9 +505,14 @@
     color: #0f172a;
 }
 
-.landing-contact-grid span {
+.landing-contact-grid a {
     color: #2563eb;
     direction: ltr;
+    text-decoration: none;
+}
+
+.landing-contact-grid a:hover {
+    text-decoration: underline;
 }
 
 .landing-footer {
