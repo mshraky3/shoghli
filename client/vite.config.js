@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-const BACKEND_URL = 'http://localhost:5000/';
+const BACKEND_URL = 'https://shoghli-backend.vercel.app/';
 
 export default defineConfig({
     define: {
