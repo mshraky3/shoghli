@@ -50,6 +50,77 @@ router.get('/', auth, requireRole('employer'), async (req, res) => {
     }
 });
 
+// GET /api/jobs/browse — Browse active job posts (for workers marketplace)
+router.get('/browse', auth, async (req, res) => {
+    try {
+        const { lat, lng, radius, category_id, page = 1, limit = 20 } = req.query;
+
+        const RADIUS_MAP = {
+            village: 3000,
+            subdistrict: 15000,
+            district: 40000,
+            governorate: 100000,
+        };
+
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+        let distanceSelect = "'0'";
+        let distanceFilter = '';
+        let orderBy = 'jp.created_at DESC';
+        const params = [];
+        let paramIndex = 1;
+
+        if (lat && lng) {
+            const radiusMeters = RADIUS_MAP[radius] || RADIUS_MAP.district;
+            params.push(parseFloat(lat), parseFloat(lng), radiusMeters);
+            distanceSelect = `(6371000 * acos(
+                cos(radians($1)) * cos(radians(jp.lat)) * cos(radians(jp.lng) - radians($2)) +
+                sin(radians($1)) * sin(radians(jp.lat))
+            ))`;
+            distanceFilter = `AND jp.lat IS NOT NULL AND jp.lng IS NOT NULL
+                AND (6371000 * acos(
+                    cos(radians($1)) * cos(radians(jp.lat)) * cos(radians(jp.lng) - radians($2)) +
+                    sin(radians($1)) * sin(radians(jp.lat))
+                )) <= $3`;
+            orderBy = 'distance_meters ASC';
+            paramIndex = 4;
+        }
+
+        let categoryFilter = '';
+        if (category_id) {
+            categoryFilter = `AND jp.category_id = $${paramIndex}`;
+            params.push(parseInt(category_id));
+            paramIndex++;
+        }
+
+        params.push(parseInt(limit), offset);
+
+        const { rows } = await query(
+            `SELECT jp.*, jc.name_ar as category_name, jc.icon as category_icon,
+                    u.name as employer_name, u.avatar_url as employer_avatar,
+                    ${distanceSelect} as distance_meters
+             FROM job_posts jp
+             JOIN job_categories jc ON jp.category_id = jc.id
+             JOIN users u ON jp.employer_id = u.id
+             WHERE jp.status = 'active'
+             ${distanceFilter}
+             ${categoryFilter}
+             ORDER BY ${orderBy}
+             LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+            params
+        );
+
+        const jobs = rows.map(j => ({
+            ...j,
+            distance_km: j.distance_meters ? Math.round(j.distance_meters / 100) / 10 : null,
+        }));
+
+        res.json({ jobs, page: parseInt(page), limit: parseInt(limit) });
+    } catch (err) {
+        console.error('browse jobs error:', err);
+        res.status(500).json({ error: 'حدث خطأ في الخادم' });
+    }
+});
+
 // GET /api/jobs/:id
 router.get('/:id', auth, async (req, res) => {
     try {

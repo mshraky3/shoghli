@@ -18,7 +18,7 @@ api.interceptors.request.use((config) => {
         url: `${config.baseURL || ''}${config.url || ''}`,
         data: config.data,
     });
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
@@ -47,16 +47,16 @@ api.interceptors.response.use(
         const original = error.config;
         if (error.response?.status === 401 && !original._retry) {
             original._retry = true;
-            const refreshToken = localStorage.getItem('refreshToken');
+            const refreshToken = sessionStorage.getItem('refreshToken');
             if (refreshToken) {
                 try {
                     const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
-                    localStorage.setItem('token', data.token);
+                    sessionStorage.setItem('token', data.token);
                     original.headers.Authorization = `Bearer ${data.token}`;
                     return api(original);
                 } catch {
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('refreshToken');
+                    sessionStorage.removeItem('token');
+                    sessionStorage.removeItem('refreshToken');
                     window.location.href = '/auth';
                 }
             }

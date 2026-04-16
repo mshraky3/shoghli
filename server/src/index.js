@@ -26,7 +26,6 @@ console.log('[boot] VERCEL:', process.env.VERCEL);
 console.log('[boot] CLIENT_URL:', process.env.CLIENT_URL);
 console.log('[boot] DB_HOST:', process.env.DATABASE_HOST ? process.env.DATABASE_HOST.slice(0, 20) + '...' : 'NOT SET');
 console.log('[boot] JWT_SECRET set:', !!process.env.JWT_SECRET);
-console.log('[boot] SMS_PROVIDER:', process.env.SMS_PROVIDER);
 
 // Request logging
 app.use((req, _res, next) => {

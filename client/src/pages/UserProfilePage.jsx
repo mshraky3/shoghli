@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { ArrowRight, MapPin, Phone, PhoneForwarded, Clock, Award } from 'lucide-react';
+import { ArrowRight, MapPin, Phone, PhoneForwarded, Clock, Award, MessageCircle } from 'lucide-react';
 
 export default function UserProfilePage() {
     const { id } = useParams();
@@ -40,6 +40,12 @@ export default function UserProfilePage() {
     };
 
     const getCategoryName = (catId) => categories.find(c => c.id === catId)?.name_ar || '';
+
+    const openWhatsApp = (phone) => {
+        const cleaned = phone.replace(/[^0-9+]/g, '');
+        const num = cleaned.startsWith('+') ? cleaned.slice(1) : cleaned;
+        window.open(`https://wa.me/${num}`, '_blank');
+    };
 
     if (loading) {
         return <div className="loading-page"><div className="spinner" /></div>;
@@ -147,11 +153,16 @@ export default function UserProfilePage() {
                 )}
 
                 {/* Action buttons */}
-                <div style={{ display: 'flex', gap: 12 }}>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                     {profile.phone ? (
-                        <a href={`tel:${profile.phone}`} className="btn btn-success btn-block btn-lg">
-                            <Phone size={18} /> اتصل الآن
-                        </a>
+                        <>
+                            <a href={`tel:${profile.phone}`} className="btn btn-success btn-lg" style={{ flex: 1 }}>
+                                <Phone size={18} /> اتصل الآن
+                            </a>
+                            <button onClick={() => openWhatsApp(profile.phone)} className="btn btn-lg btn-whatsapp" style={{ flex: 1 }}>
+                                <MessageCircle size={18} /> واتساب
+                            </button>
+                        </>
                     ) : profile.phone_visibility === 'public' ? (
                         <button onClick={sendCallRequest} className="btn btn-success btn-block btn-lg">
                             <Phone size={18} /> اتصل

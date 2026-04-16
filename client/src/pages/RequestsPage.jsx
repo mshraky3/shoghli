@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import BottomNav from '../components/BottomNav';
-import { Phone, Check, X, PhoneIncoming, PhoneOutgoing, Clock, CheckCircle, XCircle, Star } from 'lucide-react';
+import { Phone, Check, X, PhoneIncoming, PhoneOutgoing, Clock, CheckCircle, XCircle, Star, MessageCircle } from 'lucide-react';
 
 export default function RequestsPage() {
     const { user } = useAuth();
@@ -15,10 +15,8 @@ export default function RequestsPage() {
     const [ratingComment, setRatingComment] = useState('');
     const [ratingLoading, setRatingLoading] = useState(false);
 
-    useEffect(() => { loadRequests(); }, [tab]);
-
-    // Auto-refresh every 10 seconds
     useEffect(() => {
+        loadRequests();
         const interval = setInterval(loadRequests, 10000);
         return () => clearInterval(interval);
     }, [tab]);
@@ -167,12 +165,22 @@ export default function RequestsPage() {
 
                                 {r.message && <p className="req-message">{r.message}</p>}
 
-                                {/* Accepted → phone */}
+                                {/* Accepted → phone + WhatsApp */}
                                 {r.status === 'accepted' && r.revealed_phone && (
-                                    <a href={`tel:${r.revealed_phone}`} className="req-phone-banner">
-                                        <Phone size={16} />
-                                        <span style={{ direction: 'ltr' }}>{r.revealed_phone}</span>
-                                    </a>
+                                    <div className="req-phone-row">
+                                        <a href={`tel:${r.revealed_phone}`} className="req-phone-banner">
+                                            <Phone size={16} />
+                                            <span style={{ direction: 'ltr' }}>{r.revealed_phone}</span>
+                                        </a>
+                                        <button className="req-whatsapp-btn"
+                                            onClick={() => {
+                                                const cleaned = r.revealed_phone.replace(/[^0-9+]/g, '');
+                                                const num = cleaned.startsWith('+') ? cleaned.slice(1) : cleaned;
+                                                window.open(`https://wa.me/${num}`, '_blank');
+                                            }}>
+                                            <MessageCircle size={16} /> واتساب
+                                        </button>
+                                    </div>
                                 )}
 
                                 {/* Pending incoming → actions */}

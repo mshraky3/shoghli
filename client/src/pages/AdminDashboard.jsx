@@ -244,21 +244,65 @@ export default function AdminDashboard() {
             <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
                 {/* Stats */}
                 {tab === 'stats' && stats && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
-                        {[
-                            { label: 'إجمالي المستخدمين', value: stats.totalUsers, color: '#2563eb' },
-                            { label: 'العمال', value: stats.totalWorkers, color: '#16a34a' },
-                            { label: 'أصحاب العمل', value: stats.totalEmployers, color: '#7c3aed' },
-                            { label: 'الوظائف النشطة', value: stats.activeJobs, color: '#ea580c' },
-                            { label: 'بلاغات معلقة', value: stats.pendingReports, color: '#dc2626' },
-                            { label: 'طلبات التواصل', value: stats.totalRequests, color: '#0891b2' },
-                        ].map((s) => (
-                            <div key={s.label} style={{ background: 'white', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-                                <p style={{ fontSize: 13, color: '#64748b', marginBottom: 8 }}>{s.label}</p>
-                                <p style={{ fontSize: 32, fontWeight: 700, color: s.color }}>{s.value}</p>
+                    <>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
+                            {[
+                                { label: 'إجمالي المستخدمين', value: stats.totalUsers, color: '#2563eb' },
+                                { label: 'العمال', value: stats.totalWorkers, color: '#16a34a' },
+                                { label: 'أصحاب العمل', value: stats.totalEmployers, color: '#7c3aed' },
+                                { label: 'الوظائف النشطة', value: stats.activeJobs, color: '#ea580c' },
+                                { label: 'بلاغات معلقة', value: stats.pendingReports, color: '#dc2626' },
+                                { label: 'طلبات التواصل', value: stats.totalRequests, color: '#0891b2' },
+                                { label: 'محظورون', value: stats.blockedUsers, color: '#991b1b' },
+                                { label: 'جدد هذا الأسبوع', value: stats.newThisWeek, color: '#059669' },
+                            ].map((s) => (
+                                <div key={s.label} style={{ background: 'white', borderRadius: 12, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                                    <p style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>{s.label}</p>
+                                    <p style={{ fontSize: 28, fontWeight: 700, color: s.color }}>{s.value ?? '—'}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* By Governorate */}
+                        {stats.byGovernorate?.length > 0 && (
+                            <div style={{ background: 'white', borderRadius: 12, padding: 20, marginTop: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                                <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: '#1e293b' }}>المستخدمون حسب المحافظة</h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                    {stats.byGovernorate.map((g, i) => (
+                                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                            <span style={{ minWidth: 100, fontSize: 14, color: '#475569' }}>{g.name}</span>
+                                            <div style={{ flex: 1, background: '#f1f5f9', borderRadius: 8, height: 24, overflow: 'hidden' }}>
+                                                <div style={{
+                                                    height: '100%', borderRadius: 8,
+                                                    background: 'linear-gradient(90deg, #2563eb, #60a5fa)',
+                                                    width: `${Math.min(100, (g.count / (stats.totalUsers || 1)) * 100)}%`,
+                                                    transition: 'width 0.5s',
+                                                }} />
+                                            </div>
+                                            <span style={{ minWidth: 40, textAlign: 'center', fontSize: 14, fontWeight: 600 }}>{g.count}</span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                        ))}
-                    </div>
+                        )}
+
+                        {/* Top Categories */}
+                        {stats.topCategories?.length > 0 && (
+                            <div style={{ background: 'white', borderRadius: 12, padding: 20, marginTop: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                                <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: '#1e293b' }}>أكثر التخصصات طلباً</h3>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                    {stats.topCategories.map((c, i) => (
+                                        <span key={i} style={{
+                                            background: '#eff6ff', color: '#1d4ed8', padding: '6px 14px',
+                                            borderRadius: 20, fontSize: 13, fontWeight: 500,
+                                        }}>
+                                            {c.category} ({c.count})
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )}
 
                 {/* Users */}

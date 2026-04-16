@@ -1,12 +1,6 @@
-const sendSMS = async (phone, message) => {
-    const provider = process.env.SMS_PROVIDER || 'mock';
-
-    if (provider === 'mock' || provider === 'test') {
-        console.log(`📱 [${provider} SMS] To: ${phone} | Message: ${message}`);
-        return { success: true, provider };
-    }
-
-    throw new Error(`SMS provider "${provider}" is not supported. Use Firebase for authentication and keep SMS_PROVIDER as mock or test.`);
-};
+// Stub SMS service — replace with actual provider (Twilio, etc.) when ready
+async function sendSMS(phone, message) {
+    console.log(`[SMS stub] To: ${phone}, Message: ${message}`);
+}
 
 module.exports = { sendSMS };

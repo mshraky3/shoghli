@@ -121,7 +121,7 @@ router.get('/nearby', auth, async (req, res) => {
 
         const { rows } = await query(
             `SELECT 
-        u.id, u.name, u.avatar_url, u.lat, u.lng, u.phone_visibility, u.is_active,
+        u.id, u.name, u.phone, u.avatar_url, u.lat, u.lng, u.phone_visibility, u.is_active,
         u.governorate_id, u.district_id, u.avg_rating, u.rating_count,
         g.name_ar as governorate_name, d.name_ar as district_name,
         wp.category_ids, wp.experience_years, wp.available_hours, wp.bio,
@@ -148,10 +148,10 @@ router.get('/nearby', auth, async (req, res) => {
             params
         );
 
-        // Never expose phone numbers in list view
+        // Only expose phone when visibility is public
         const workers = rows.map(w => {
             const worker = { ...w };
-            delete worker.phone;
+            if (worker.phone_visibility !== 'public') delete worker.phone;
             worker.distance_km = Math.round(worker.distance_meters / 100) / 10;
             return worker;
         });

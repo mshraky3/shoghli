@@ -52,13 +52,27 @@ router.post('/login',
 // GET /api/admin/stats
 router.get('/stats', requireAdmin, async (req, res) => {
     try {
-        const [users, workers, employers, jobs, reports, requests] = await Promise.all([
+        const [users, workers, employers, jobs, reports, requests, blocked, newThisWeek, byGovernorate, topCategories] = await Promise.all([
             query('SELECT COUNT(*) as count FROM users'),
             query("SELECT COUNT(*) as count FROM users WHERE role = 'worker'"),
             query("SELECT COUNT(*) as count FROM users WHERE role = 'employer'"),
             query("SELECT COUNT(*) as count FROM job_posts WHERE status = 'active'"),
             query("SELECT COUNT(*) as count FROM reports WHERE status = 'pending'"),
             query('SELECT COUNT(*) as count FROM call_requests'),
+            query('SELECT COUNT(*) as count FROM users WHERE is_blocked = true'),
+            query("SELECT COUNT(*) as count FROM users WHERE created_at >= NOW() - INTERVAL '7 days'"),
+            query(`SELECT g.name_ar as governorate, COUNT(u.id) as count
+                   FROM users u
+                   JOIN governorates g ON u.governorate_id = g.id
+                   GROUP BY g.name_ar
+                   ORDER BY count DESC
+                   LIMIT 10`),
+            query(`SELECT jc.name_ar as category, COUNT(*) as count
+                   FROM worker_profiles wp, unnest(wp.category_ids) AS cat_id
+                   JOIN job_categories jc ON jc.id = cat_id
+                   GROUP BY jc.id, jc.name_ar
+                   ORDER BY count DESC
+                   LIMIT 10`),
         ]);
 
         res.json({
@@ -68,6 +82,10 @@ router.get('/stats', requireAdmin, async (req, res) => {
             activeJobs: parseInt(jobs.rows[0].count),
             pendingReports: parseInt(reports.rows[0].count),
             totalRequests: parseInt(requests.rows[0].count),
+            blockedUsers: parseInt(blocked.rows[0].count),
+            newThisWeek: parseInt(newThisWeek.rows[0].count),
+            byGovernorate: byGovernorate.rows,
+            topCategories: topCategories.rows,
         });
     } catch (err) {
         console.error('admin stats error:', err);
@@ -245,10 +263,12 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
         // Delete related data first
         await query('DELETE FROM otp_codes WHERE phone = (SELECT phone FROM users WHERE id = $1)', [id]);
         await query('DELETE FROM reports WHERE reporter_id = $1 OR reported_user_id = $1', [id]);
-        await query('DELETE FROM ratings WHERE rater_id = $1 OR rated_id = $1', [id]);
-        await query('DELETE FROM call_requests WHERE requester_id = $1 OR worker_id = $1', [id]);
+        await query('DELETE FROM ratings WHERE from_user_id = $1 OR to_user_id = $1', [id]);
+        await query('DELETE FROM call_requests WHERE from_user_id = $1 OR to_user_id = $1', [id]);
         await query('DELETE FROM notifications WHERE user_id = $1', [id]);
         await query('DELETE FROM job_posts WHERE employer_id = $1', [id]);
+        await query('DELETE FROM worker_profiles WHERE user_id = $1', [id]);
+        await query('DELETE FROM employer_profiles WHERE user_id = $1', [id]);
         await query('DELETE FROM users WHERE id = $1', [id]);
 
         res.json({ message: 'تم حذف المستخدم' });

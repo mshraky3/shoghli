@@ -1,12 +1,55 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import L from 'leaflet';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import BottomNav from '../components/BottomNav';
 import {
     LogOut, Star, MapPin, Edit3, Check, ChevronLeft,
-    Shield, FileText, Briefcase, Calendar, Clock, Eye, EyeOff
+    Shield, FileText, Briefcase, Calendar, Clock, Eye, EyeOff,
+    Navigation, X
 } from 'lucide-react';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
+
+const pinIcon = new L.Icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41],
+});
+
+const SYRIA_CENTER = [35.0, 38.5];
+const SYRIA_BOUNDS = [[32.3, 35.5], [37.4, 42.5]];
+
+const CATEGORY_ICONS = {
+    'zap': '⚡', 'droplets': '🔧', 'truck': '🚚', 'heart-pulse': '🩺',
+    'car': '🚗', 'hammer': '🔨', 'paintbrush': '🎨', 'sparkles': '✨',
+    'building': '🏗️', 'anvil': '⚒️', 'wrench': '🔩', 'wheat': '🌾',
+    'chef-hat': '👨‍🍳', 'scissors': '✂️', 'briefcase': '💼',
+};
+
+function DraggableMarker({ position, onMove }) {
+    useMapEvents({
+        click(e) {
+            onMove({ lat: e.latlng.lat, lng: e.latlng.lng });
+        },
+    });
+    return position ? <Marker position={[position.lat, position.lng]} icon={pinIcon} /> : null;
+}
+
+function MapFlyTo({ center }) {
+    const map = useMap();
+    useEffect(() => {
+        if (center) map.flyTo(center, 13);
+    }, [center, map]);
+    return null;
+}
 
 const DAYS_LABELS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
@@ -23,9 +66,40 @@ export default function ProfilePage() {
     const [avatarPreview, setAvatarPreview] = useState(user?.avatar_url || '');
     const fileInputRef = useRef(null);
 
+    // Location editing
+    const [homeLocation, setHomeLocation] = useState(
+        user?.lat && user?.lng ? { lat: parseFloat(user.lat), lng: parseFloat(user.lng) } : null
+    );
+    const [showMapPicker, setShowMapPicker] = useState(false);
+    const [locationLabel, setLocationLabel] = useState('');
+    const [locating, setLocating] = useState(false);
+
+    // Category editing (workers)
+    const [allCategories, setAllCategories] = useState([]);
+    const [selectedCategoryIds, setSelectedCategoryIds] = useState(
+        user?.worker_profile?.category_ids || []
+    );
+
     useEffect(() => {
         setAvatarPreview(user?.avatar_url || '');
     }, [user?.avatar_url]);
+
+    useEffect(() => {
+        api.get('/categories').then(({ data }) => setAllCategories(data.categories || [])).catch(() => { });
+    }, []);
+
+    useEffect(() => {
+        if (!homeLocation) { setLocationLabel(''); return; }
+        api.get(`/locations/reverse-geocode?lat=${homeLocation.lat}&lng=${homeLocation.lng}`)
+            .then(({ data }) => {
+                const loc = data?.location || {};
+                setLocationLabel(
+                    [loc.village_name, loc.subdistrict_name, loc.district_name, loc.governorate_name]
+                        .filter(Boolean).join('، ') || 'سوريا'
+                );
+            })
+            .catch(() => setLocationLabel('سوريا'));
+    }, [homeLocation]);
 
     const save = async () => {
         setSaving(true);
@@ -33,7 +107,10 @@ export default function ProfilePage() {
         try {
             await api.put('/users/profile', { name, phone_visibility: phoneVisibility });
             if (user?.role === 'worker') {
-                await api.put('/workers/profile', { bio });
+                await api.put('/workers/profile', { bio, category_ids: selectedCategoryIds });
+            }
+            if (homeLocation) {
+                await api.put('/users/location', { lat: homeLocation.lat, lng: homeLocation.lng });
             }
             await refreshUser();
             setMessage('تم الحفظ بنجاح');
@@ -48,6 +125,25 @@ export default function ProfilePage() {
     const handleLogout = () => {
         logout();
         navigate('/auth');
+    };
+
+    const useCurrentGPS = () => {
+        if (!navigator.geolocation) return;
+        setLocating(true);
+        navigator.geolocation.getCurrentPosition(
+            ({ coords }) => {
+                setHomeLocation({ lat: coords.latitude, lng: coords.longitude });
+                setLocating(false);
+            },
+            () => { setLocating(false); alert('تعذر تحديد الموقع'); },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+    };
+
+    const toggleCategory = (catId) => {
+        setSelectedCategoryIds(prev =>
+            prev.includes(catId) ? prev.filter(id => id !== catId) : [...prev, catId]
+        );
     };
 
     const onChooseAvatar = () => {
@@ -197,6 +293,55 @@ export default function ProfilePage() {
                                         </button>
                                     </div>
                                 </div>
+
+                                {/* Category selection */}
+                                <div className="prof-field">
+                                    <label className="prof-field-label">المهارات / التخصصات</label>
+                                    <div className="prof-category-grid">
+                                        {allCategories.map(cat => (
+                                            <button key={cat.id}
+                                                className={`prof-cat-chip ${selectedCategoryIds.includes(cat.id) ? 'active' : ''}`}
+                                                onClick={() => toggleCategory(cat.id)}>
+                                                <span>{CATEGORY_ICONS[cat.icon] || '🔧'}</span> {cat.name_ar}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Home location */}
+                                <div className="prof-field">
+                                    <label className="prof-field-label">
+                                        <MapPin size={14} /> موقع المنزل
+                                    </label>
+                                    <p className="prof-field-hint">هذا الموقع يُستخدم لعرضك في نتائج البحث القريبة. اختر موقع منزلك وليس موقعك الحالي.</p>
+                                    {locationLabel && (
+                                        <div className="prof-location-label">{locationLabel}</div>
+                                    )}
+                                    <div className="prof-location-actions">
+                                        <button className="btn btn-secondary btn-sm"
+                                            onClick={() => setShowMapPicker(!showMapPicker)}>
+                                            <MapPin size={14} /> {showMapPicker ? 'إخفاء الخريطة' : 'اختر على الخريطة'}
+                                        </button>
+                                        <button className="btn btn-secondary btn-sm" onClick={useCurrentGPS} disabled={locating}>
+                                            <Navigation size={14} /> {locating ? 'جاري...' : 'استخدم GPS'}
+                                        </button>
+                                    </div>
+                                    {showMapPicker && (
+                                        <div className="prof-map-container">
+                                            <MapContainer
+                                                center={homeLocation ? [homeLocation.lat, homeLocation.lng] : SYRIA_CENTER}
+                                                zoom={homeLocation ? 13 : 7}
+                                                maxBounds={SYRIA_BOUNDS}
+                                                maxBoundsViscosity={1.0}
+                                                style={{ height: 250, width: '100%', borderRadius: 12 }}>
+                                                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                                <DraggableMarker position={homeLocation} onMove={setHomeLocation} />
+                                                <MapFlyTo center={homeLocation ? [homeLocation.lat, homeLocation.lng] : null} />
+                                            </MapContainer>
+                                            <p className="prof-map-hint">اضغط على الخريطة لتحديد موقعك</p>
+                                        </div>
+                                    )}
+                                </div>
                             </>
                         ) : (
                             <>
@@ -243,6 +388,52 @@ export default function ProfilePage() {
                                 )}
                             </>
                         )}
+                    </div>
+                )}
+
+                {/* Employer: location + phone visibility editing */}
+                {user?.role === 'employer' && editing && (
+                    <div className="prof-section">
+                        <div className="prof-field">
+                            <label className="prof-field-label">إعداد رقم الهاتف</label>
+                            <div className="prof-visibility-toggle">
+                                <button className={phoneVisibility === 'public' ? 'active' : ''}
+                                    onClick={() => setPhoneVisibility('public')}>
+                                    <Eye size={16} /> عام
+                                </button>
+                                <button className={phoneVisibility === 'request_only' ? 'active' : ''}
+                                    onClick={() => setPhoneVisibility('request_only')}>
+                                    <EyeOff size={16} /> بطلب فقط
+                                </button>
+                            </div>
+                        </div>
+                        <div className="prof-field">
+                            <label className="prof-field-label"><MapPin size={14} /> موقع المنزل</label>
+                            <p className="prof-field-hint">الموقع يُستخدم للبحث عن العمّال القريبين.</p>
+                            {locationLabel && <div className="prof-location-label">{locationLabel}</div>}
+                            <div className="prof-location-actions">
+                                <button className="btn btn-secondary btn-sm" onClick={() => setShowMapPicker(!showMapPicker)}>
+                                    <MapPin size={14} /> {showMapPicker ? 'إخفاء الخريطة' : 'اختر على الخريطة'}
+                                </button>
+                                <button className="btn btn-secondary btn-sm" onClick={useCurrentGPS} disabled={locating}>
+                                    <Navigation size={14} /> {locating ? 'جاري...' : 'استخدم GPS'}
+                                </button>
+                            </div>
+                            {showMapPicker && (
+                                <div className="prof-map-container">
+                                    <MapContainer
+                                        center={homeLocation ? [homeLocation.lat, homeLocation.lng] : SYRIA_CENTER}
+                                        zoom={homeLocation ? 13 : 7}
+                                        maxBounds={SYRIA_BOUNDS} maxBoundsViscosity={1.0}
+                                        style={{ height: 250, width: '100%', borderRadius: 12 }}>
+                                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                        <DraggableMarker position={homeLocation} onMove={setHomeLocation} />
+                                        <MapFlyTo center={homeLocation ? [homeLocation.lat, homeLocation.lng] : null} />
+                                    </MapContainer>
+                                    <p className="prof-map-hint">اضغط على الخريطة لتحديد موقعك</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 

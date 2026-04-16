@@ -7,7 +7,8 @@ import api from '../services/api';
 import BottomNav from '../components/BottomNav';
 import {
     MapPin, Phone, PhoneForwarded, Search, List, Map as MapIcon,
-    Star, Briefcase, Clock, Navigation, User, LocateFixed
+    Star, Briefcase, Clock, Navigation, User, LocateFixed, MessageCircle,
+    DollarSign, Building2
 } from 'lucide-react';
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -50,6 +51,7 @@ function MapController({ center }) {
 export default function Dashboard() {
     const { user } = useAuth();
     const [workers, setWorkers] = useState([]);
+    const [jobs, setJobs] = useState([]);
     const [categories, setCategories] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState('');
     const [radius, setRadius] = useState('district');
@@ -59,6 +61,7 @@ export default function Dashboard() {
     const [searchPoint, setSearchPoint] = useState(user?.lat && user?.lng ? { lat: user.lat, lng: user.lng } : null);
     const [locationLabel, setLocationLabel] = useState('موقع غير محدد');
     const [locating, setLocating] = useState(false);
+    const [workerTab, setWorkerTab] = useState('jobs');
 
     const center = searchPoint ? [searchPoint.lat, searchPoint.lng] : SYRIA_CENTER;
 
@@ -103,28 +106,36 @@ export default function Dashboard() {
         }
     }, [searchPoint, radius, selectedCategory]);
 
+    const searchJobs = useCallback(async () => {
+        if (!searchPoint?.lat || !searchPoint?.lng) return;
+        setLoading(true);
+        try {
+            const params = new URLSearchParams({ lat: searchPoint.lat, lng: searchPoint.lng, radius });
+            if (selectedCategory) params.append('category_id', selectedCategory);
+            const { data } = await api.get(`/jobs/browse?${params}`);
+            setJobs(data.jobs || []);
+        } catch (err) {
+            console.error('Jobs search failed:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, [searchPoint, radius, selectedCategory]);
+
     useEffect(() => {
         if (user?.role === 'employer') searchWorkers();
-    }, [searchWorkers, user?.role]);
+        if (user?.role === 'worker') {
+            if (workerTab === 'jobs') searchJobs();
+            else searchWorkers();
+        }
+    }, [searchWorkers, searchJobs, user?.role, workerTab]);
 
     const refreshSearchLocation = () => {
         if (!navigator.geolocation) return;
-
         setLocating(true);
         navigator.geolocation.getCurrentPosition(
-            async ({ coords }) => {
-                const nextPoint = { lat: coords.latitude, lng: coords.longitude };
-                setSearchPoint(nextPoint);
-                try {
-                    await api.put('/users/location', {
-                        lat: nextPoint.lat,
-                        lng: nextPoint.lng,
-                    });
-                } catch (err) {
-                    console.error('Location update failed:', err);
-                } finally {
-                    setLocating(false);
-                }
+            ({ coords }) => {
+                setSearchPoint({ lat: coords.latitude, lng: coords.longitude });
+                setLocating(false);
             },
             () => setLocating(false),
             { enableHighAccuracy: true, timeout: 10000 }
@@ -161,6 +172,12 @@ export default function Dashboard() {
         }
     };
 
+    const openWhatsApp = (phone) => {
+        const cleaned = phone.replace(/[^0-9+]/g, '');
+        const num = cleaned.startsWith('+') ? cleaned.slice(1) : cleaned;
+        window.open(`https://wa.me/${num}`, '_blank');
+    };
+
     const getCategoryName = (catId) => {
         const cat = categories.find(c => c.id === catId);
         return cat?.name_ar || '';
@@ -183,6 +200,9 @@ export default function Dashboard() {
         return stars;
     };
 
+    const isEmployer = user?.role === 'employer';
+    const isWorker = user?.role === 'worker';
+
     return (
         <div className="dash-page">
             {/* Header */}
@@ -190,9 +210,10 @@ export default function Dashboard() {
                 <div className="dash-header-top">
                     <div className="dash-logo-wrap">
                         <img src="/imges/logo.ico" alt="شعار شغلي" className="dash-logo-img" />
+                        <span className="dash-logo">شغلي</span>
                     </div>
                     <div className="dash-header-actions">
-                        {user?.role === 'worker' && (
+                        {isWorker && (
                             <button onClick={toggleAvailability}
                                 className={`dash-status-pill ${isAvailable ? 'available' : 'unavailable'}`}>
                                 <span className="dash-status-dot" />
@@ -202,42 +223,49 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {/* Employer: Category scroll + filters */}
-                {user?.role === 'employer' && searchPoint && (
+                {/* Worker tabs: Jobs / Workers */}
+                {isWorker && searchPoint && (
+                    <div className="dash-worker-tabs">
+                        <button className={`dash-worker-tab ${workerTab === 'jobs' ? 'active' : ''}`}
+                            onClick={() => setWorkerTab('jobs')}>
+                            <Briefcase size={14} /> الوظائف
+                        </button>
+                        <button className={`dash-worker-tab ${workerTab === 'workers' ? 'active' : ''}`}
+                            onClick={() => setWorkerTab('workers')}>
+                            <User size={14} /> العمّال
+                        </button>
+                    </div>
+                )}
+
+                {/* Category scroll + filters (both roles) */}
+                {searchPoint && (
                     <>
                         <div className="dash-category-scroll">
-                            <button
-                                className={`dash-cat-chip ${!selectedCategory ? 'active' : ''}`}
-                                onClick={() => setSelectedCategory('')}>
-                                الكل
-                            </button>
+                            <button className={`dash-cat-chip ${!selectedCategory ? 'active' : ''}`}
+                                onClick={() => setSelectedCategory('')}>الكل</button>
                             {categories.map(cat => (
                                 <button key={cat.id}
-                                    className={`dash-cat-chip ${selectedCategory == cat.id ? 'active' : ''}`}
-                                    onClick={() => setSelectedCategory(selectedCategory == cat.id ? '' : String(cat.id))}>
+                                    className={`dash-cat-chip ${String(selectedCategory) === String(cat.id) ? 'active' : ''}`}
+                                    onClick={() => setSelectedCategory(String(selectedCategory) === String(cat.id) ? '' : String(cat.id))}>
                                     <span>{CATEGORY_ICONS[cat.icon] || '🔧'}</span> {cat.name_ar}
                                 </button>
                             ))}
                         </div>
                         <div className="dash-toolbar">
-                            <div className="dash-filter-btn static">
-                                <MapPin size={14} /> {radiusMeta.l}
-                            </div>
-                            <div className="dash-view-toggle">
-                                <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>
-                                    <List size={16} />
-                                </button>
-                                <button className={viewMode === 'map' ? 'active' : ''} onClick={() => setViewMode('map')}>
-                                    <MapIcon size={16} />
-                                </button>
-                            </div>
+                            <div className="dash-filter-btn static"><MapPin size={14} /> {radiusMeta.l}</div>
+                            {(isEmployer || (isWorker && workerTab === 'workers')) && (
+                                <div className="dash-view-toggle">
+                                    <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}><List size={16} /></button>
+                                    <button className={viewMode === 'map' ? 'active' : ''} onClick={() => setViewMode('map')}><MapIcon size={16} /></button>
+                                </div>
+                            )}
                         </div>
                         <div className="dash-selection-panel">
                             <div className="dash-selection-head">
                                 <span className="dash-selection-label">منطقة البحث:</span>
                                 <span className="dash-selection-value">{locationLabel}</span>
                                 <button className="dash-selection-refresh" onClick={refreshSearchLocation} disabled={locating}>
-                                    <Navigation size={13} /> {locating ? 'جاري التحديث...' : 'تحديث الموقع'}
+                                    <Navigation size={13} /> {locating ? 'جاري...' : 'تحديث'}
                                 </button>
                             </div>
                             <div className="dash-radius-bar">
@@ -245,27 +273,19 @@ export default function Dashboard() {
                                     <button key={r.v}
                                         className={`dash-radius-option ${radius === r.v ? 'active' : ''}`}
                                         onClick={() => setRadius(r.v)}>
-                                        {r.l}
-                                        <span className="dash-radius-desc">{r.d}</span>
+                                        {r.l}<span className="dash-radius-desc">{r.d}</span>
                                     </button>
                                 ))}
                             </div>
                         </div>
                     </>
                 )}
-
-                {/* Worker: welcome */}
-                {user?.role === 'worker' && (
-                    <div className="dash-welcome">
-                        <p className="dash-welcome-text">مرحباً <strong>{user?.name || 'بك'}</strong></p>
-                        <p className="dash-welcome-sub">تحكّم بحالتك ليراك أصحاب العمل القريبين</p>
-                    </div>
-                )}
             </header>
 
             {/* Content */}
             <main className="dash-content">
-                {user?.role === 'employer' && viewMode === 'map' ? (
+                {/* Map view (employer or worker browsing workers) */}
+                {(isEmployer || (isWorker && workerTab === 'workers')) && viewMode === 'map' && searchPoint ? (
                     <div className="dash-map-wrap">
                         <MapContainer center={center} zoom={user?.lat ? 11 : 7}
                             maxBounds={SYRIA_BOUNDS} maxBoundsViscosity={1.0}
@@ -306,7 +326,8 @@ export default function Dashboard() {
                             ))}
                         </MapContainer>
                     </div>
-                ) : user?.role === 'employer' ? (
+                ) : (isEmployer || (isWorker && workerTab === 'workers')) && searchPoint ? (
+                    /* Worker list */
                     <div className="dash-list">
                         {loading && <div className="dash-loading"><div className="spinner" /></div>}
                         {!loading && workers.length === 0 && (
@@ -350,75 +371,92 @@ export default function Dashboard() {
                                     </div>
                                 </Link>
                                 <div className="wcard-actions">
-                                    <button onClick={(e) => { e.stopPropagation(); sendCallRequest(w.id); }}
-                                        className={`wcard-btn ${w.phone_visibility === 'public' ? 'call' : 'request'}`}>
-                                        {w.phone_visibility === 'public' ? <><Phone size={15} /> اتصل</> : <><PhoneForwarded size={15} /> طلب اتصال</>}
-                                    </button>
+                                    <div className="wcard-actions-row">
+                                        <button onClick={(e) => { e.stopPropagation(); sendCallRequest(w.id); }}
+                                            className={`wcard-btn ${w.phone_visibility === 'public' ? 'call' : 'request'}`}>
+                                            {w.phone_visibility === 'public' ? <><Phone size={15} /> اتصل</> : <><PhoneForwarded size={15} /> طلب اتصال</>}
+                                        </button>
+                                        {w.phone_visibility === 'public' && w.phone && (
+                                            <button onClick={(e) => { e.stopPropagation(); openWhatsApp(w.phone); }}
+                                                className="wcard-btn whatsapp">
+                                                <MessageCircle size={15} /> واتساب
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         ))}
                     </div>
-                ) : (
-                    /* Worker view */
-                    <div className="dash-worker-home">
-                        <div className="dash-avail-card" onClick={toggleAvailability}>
-                            <div className={`dash-avail-indicator ${isAvailable ? 'on' : 'off'}`}>
-                                <div className="dash-avail-circle" />
+                ) : isWorker && workerTab === 'jobs' && searchPoint ? (
+                    /* Job posts list for workers */
+                    <div className="dash-list">
+                        {loading && <div className="dash-loading"><div className="spinner" /></div>}
+                        {!loading && jobs.length === 0 && (
+                            <div className="dash-empty">
+                                <Briefcase size={48} strokeWidth={1.2} />
+                                <p>لا توجد وظائف قريبة</p>
+                                <span>جرّب توسيع نطاق البحث أو تغيير الفئة</span>
                             </div>
-                            <div>
-                                <h3>{isAvailable ? 'أنت متاح للعمل' : 'أنت غير متاح حالياً'}</h3>
-                                <p>{isAvailable ? 'أصحاب العمل يمكنهم رؤيتك والتواصل معك' : 'اضغط هنا لتصبح متاحاً ويراك أصحاب العمل'}</p>
+                        )}
+                        {jobs.map(j => (
+                            <div key={j.id} className="wcard job-card">
+                                <div className="wcard-main" style={{ cursor: 'default' }}>
+                                    <div className="wcard-avatar job-avatar">
+                                        {j.employer_avatar ? (
+                                            <img src={j.employer_avatar} alt={j.employer_name} className="avatar-img-cover" />
+                                        ) : (
+                                            <Building2 size={22} strokeWidth={1.8} />
+                                        )}
+                                    </div>
+                                    <div className="wcard-info">
+                                        <div className="wcard-name-row">
+                                            <span className="wcard-name">{j.title || 'وظيفة'}</span>
+                                        </div>
+                                        <div className="wcard-tags">
+                                            <span className="wcard-tag">
+                                                {CATEGORY_ICONS[j.category_icon] || '🔧'} {j.category_name}
+                                            </span>
+                                        </div>
+                                        {j.description && (
+                                            <p className="job-desc">{j.description.length > 100 ? j.description.substring(0, 100) + '...' : j.description}</p>
+                                        )}
+                                        <div className="wcard-meta">
+                                            {(j.salary_min || j.salary_max) && (
+                                                <span><DollarSign size={12} /> {j.salary_min && j.salary_max ? `${j.salary_min} - ${j.salary_max}` : j.salary_min || j.salary_max} ل.س</span>
+                                            )}
+                                            {j.distance_km && <span><MapPin size={12} /> {j.distance_km} كم</span>}
+                                            {j.employer_name && <span>{j.employer_name}</span>}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="wcard-actions">
+                                    <Link to={`/profile/${j.employer_id}`} className="wcard-btn request" style={{ textDecoration: 'none' }}>
+                                        <User size={15} /> عرض صاحب العمل
+                                    </Link>
+                                </div>
                             </div>
-                        </div>
-
-                        <div className="dash-worker-stats">
-                            <div className="dash-stat-card">
-                                <Briefcase size={22} color="var(--primary)" />
-                                <span className="dash-stat-num">{user?.worker_profile?.category_ids?.length || 0}</span>
-                                <span className="dash-stat-label">مهارة</span>
-                            </div>
-                            <div className="dash-stat-card">
-                                <Star size={22} color="#f59e0b" />
-                                <span className="dash-stat-num">{user?.avg_rating ? parseFloat(user.avg_rating).toFixed(1) : '—'}</span>
-                                <span className="dash-stat-label">التقييم</span>
-                            </div>
-                            <div className="dash-stat-card">
-                                <Clock size={22} color="var(--success)" />
-                                <span className="dash-stat-num">{user?.worker_profile?.work_days?.length || 0}</span>
-                                <span className="dash-stat-label">يوم/أسبوع</span>
-                            </div>
-                        </div>
-
-                        <div className="dash-tip-card">
-                            <h4>نصائح لزيادة فرصك</h4>
-                            <ul>
-                                <li>أكمل ملفك الشخصي بالكامل</li>
-                                <li>أضف وصفاً تفصيلياً لخبراتك</li>
-                                <li>كن متاحاً في أوقات الذروة</li>
-                                <li>رد بسرعة على طلبات الاتصال</li>
-                            </ul>
-                        </div>
+                        ))}
                     </div>
-                )}
+                ) : null}
             </main>
 
-            {/* Location required overlay for employers */}
-            {user?.role === 'employer' && !searchPoint && (
+            {/* Location required overlay */}
+            {!searchPoint && (
                 <div className="modal-overlay" style={{ alignItems: 'center' }}>
                     <div className="dash-location-popup">
                         <div className="dash-location-popup-icon">
                             <LocateFixed size={48} strokeWidth={1.5} />
                         </div>
                         <h2>حدّد موقعك أولاً</h2>
-                        <p>لعرض العمّال القريبين منك، نحتاج الوصول إلى موقعك الحالي</p>
-                        <button
-                            className="btn btn-primary btn-lg btn-block"
-                            onClick={refreshSearchLocation}
-                            disabled={locating}
-                            style={{ marginTop: 8 }}>
+                        <p>لعرض المحتوى القريب منك، نحتاج الوصول إلى موقعك أو يمكنك تحديده من الملف الشخصي</p>
+                        <button className="btn btn-primary btn-lg btn-block"
+                            onClick={refreshSearchLocation} disabled={locating} style={{ marginTop: 8 }}>
                             <Navigation size={18} />
-                            {locating ? 'جاري تحديد الموقع...' : 'تحديث الموقع'}
+                            {locating ? 'جاري تحديد الموقع...' : 'استخدم موقعي الحالي'}
                         </button>
+                        <Link to="/profile" className="btn btn-secondary btn-block" style={{ marginTop: 8, textDecoration: 'none' }}>
+                            <MapPin size={18} /> تحديد موقع المنزل
+                        </Link>
                     </div>
                 </div>
             )}

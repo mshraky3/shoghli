@@ -8,13 +8,13 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         if (token) {
             api.get('/auth/me')
                 .then(({ data }) => setUser(data.user))
                 .catch(() => {
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('refreshToken');
+                    sessionStorage.removeItem('token');
+                    sessionStorage.removeItem('refreshToken');
                 })
                 .finally(() => setLoading(false));
         } else {
@@ -23,14 +23,14 @@ export function AuthProvider({ children }) {
     }, []);
 
     const login = (token, refreshToken, userData) => {
-        localStorage.setItem('token', token);
-        localStorage.setItem('refreshToken', refreshToken);
+        sessionStorage.setItem('token', token);
+        sessionStorage.setItem('refreshToken', refreshToken);
         setUser(userData);
     };
 
     const logout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('refreshToken');
         setUser(null);
     };
 
