@@ -112,7 +112,7 @@ router.get('/reverse-geocode', async (req, res) => {
 
         const result = distRows[0];
 
-        // Try to find nearest village
+        // Try to find nearest village only within the matched district
         const { rows: villageRows } = await query(
             `SELECT v.id as village_id, v.name_ar as village_name,
         s.id as subdistrict_id, s.name_ar as subdistrict_name,
@@ -123,9 +123,10 @@ router.get('/reverse-geocode', async (req, res) => {
        FROM villages v
        JOIN subdistricts s ON v.subdistrict_id = s.id
        WHERE v.lat IS NOT NULL AND v.lng IS NOT NULL
+         AND s.district_id = $3
        ORDER BY distance_km ASC
        LIMIT 1`,
-            [userLat, userLng]
+            [userLat, userLng, result.district_id]
         );
 
         const location = {

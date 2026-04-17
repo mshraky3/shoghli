@@ -52,7 +52,24 @@ router.post('/login',
 // GET /api/admin/stats
 router.get('/stats', requireAdmin, async (req, res) => {
     try {
-        const [users, workers, employers, jobs, reports, requests, blocked, newThisWeek, byGovernorate, topCategories] = await Promise.all([
+        const [
+            users,
+            workers,
+            employers,
+            jobs,
+            reports,
+            requests,
+            blocked,
+            newThisWeek,
+            onboardingCompleted,
+            newThisMonth,
+            byGovernorate,
+            topCategories,
+            jobsByStatus,
+            requestsByStatus,
+            reportsByStatus,
+            recentSignups,
+        ] = await Promise.all([
             query('SELECT COUNT(*) as count FROM users'),
             query("SELECT COUNT(*) as count FROM users WHERE role = 'worker'"),
             query("SELECT COUNT(*) as count FROM users WHERE role = 'employer'"),
@@ -61,7 +78,9 @@ router.get('/stats', requireAdmin, async (req, res) => {
             query('SELECT COUNT(*) as count FROM call_requests'),
             query('SELECT COUNT(*) as count FROM users WHERE is_blocked = true'),
             query("SELECT COUNT(*) as count FROM users WHERE created_at >= NOW() - INTERVAL '7 days'"),
-            query(`SELECT g.name_ar as governorate, COUNT(u.id) as count
+            query("SELECT COUNT(*) as count FROM users WHERE onboarding_completed = true"),
+            query("SELECT COUNT(*) as count FROM users WHERE created_at >= NOW() - INTERVAL '30 days'"),
+            query(`SELECT g.name_ar as name, COUNT(u.id) as count
                    FROM users u
                    JOIN governorates g ON u.governorate_id = g.id
                    GROUP BY g.name_ar
@@ -73,6 +92,23 @@ router.get('/stats', requireAdmin, async (req, res) => {
                    GROUP BY jc.id, jc.name_ar
                    ORDER BY count DESC
                    LIMIT 10`),
+            query(`SELECT status::text as status, COUNT(*) as count
+                   FROM job_posts
+                   GROUP BY status
+                   ORDER BY count DESC`),
+            query(`SELECT status::text as status, COUNT(*) as count
+                   FROM call_requests
+                   GROUP BY status
+                   ORDER BY count DESC`),
+            query(`SELECT status::text as status, COUNT(*) as count
+                   FROM reports
+                   GROUP BY status
+                   ORDER BY count DESC`),
+            query(`SELECT TO_CHAR(d.day, 'YYYY-MM-DD') as day, COALESCE(COUNT(u.id), 0) as count
+                   FROM generate_series(CURRENT_DATE - INTERVAL '6 days', CURRENT_DATE, INTERVAL '1 day') AS d(day)
+                   LEFT JOIN users u ON DATE(u.created_at) = d.day::date
+                   GROUP BY d.day
+                   ORDER BY d.day ASC`),
         ]);
 
         res.json({
@@ -84,8 +120,32 @@ router.get('/stats', requireAdmin, async (req, res) => {
             totalRequests: parseInt(requests.rows[0].count),
             blockedUsers: parseInt(blocked.rows[0].count),
             newThisWeek: parseInt(newThisWeek.rows[0].count),
-            byGovernorate: byGovernorate.rows,
-            topCategories: topCategories.rows,
+            onboardingCompleted: parseInt(onboardingCompleted.rows[0].count),
+            newThisMonth: parseInt(newThisMonth.rows[0].count),
+            byGovernorate: byGovernorate.rows.map((row) => ({
+                name: row.name,
+                count: parseInt(row.count),
+            })),
+            topCategories: topCategories.rows.map((row) => ({
+                category: row.category,
+                count: parseInt(row.count),
+            })),
+            jobsByStatus: jobsByStatus.rows.map((row) => ({
+                status: row.status,
+                count: parseInt(row.count),
+            })),
+            requestsByStatus: requestsByStatus.rows.map((row) => ({
+                status: row.status,
+                count: parseInt(row.count),
+            })),
+            reportsByStatus: reportsByStatus.rows.map((row) => ({
+                status: row.status,
+                count: parseInt(row.count),
+            })),
+            recentSignups: recentSignups.rows.map((row) => ({
+                day: row.day,
+                count: parseInt(row.count),
+            })),
         });
     } catch (err) {
         console.error('admin stats error:', err);

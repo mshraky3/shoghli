@@ -121,7 +121,7 @@ router.get('/nearby', auth, async (req, res) => {
 
         const { rows } = await query(
             `SELECT 
-        u.id, u.name, u.phone, u.avatar_url, u.lat, u.lng, u.phone_visibility, u.is_active,
+        u.id, u.name, u.phone, u.avatar_url, u.lat, u.lng, u.phone_visibility, u.whatsapp_opt_in, u.is_active,
         u.governorate_id, u.district_id, u.avg_rating, u.rating_count,
         g.name_ar as governorate_name, d.name_ar as district_name,
         wp.category_ids, wp.experience_years, wp.available_hours, wp.bio,

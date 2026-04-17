@@ -75,7 +75,7 @@ router.put('/location', auth,
 // PUT /api/users/profile — Update profile
 router.put('/profile', auth, async (req, res) => {
     try {
-        const { name, phone_visibility } = req.body;
+        const { name, phone_visibility, whatsapp_opt_in, company_name } = req.body;
 
         const updates = [];
         const values = [];
@@ -89,18 +89,32 @@ router.put('/profile', auth, async (req, res) => {
             updates.push(`phone_visibility = $${paramIndex++}`);
             values.push(phone_visibility);
         }
+        if (typeof whatsapp_opt_in === 'boolean') {
+            updates.push(`whatsapp_opt_in = $${paramIndex++}`);
+            values.push(whatsapp_opt_in);
+        }
 
-        if (updates.length === 0) {
+        if (updates.length === 0 && !company_name) {
             return res.status(400).json({ error: 'لا توجد بيانات للتحديث' });
         }
 
-        updates.push(`updated_at = NOW()`);
-        values.push(req.user.id);
+        if (updates.length > 0) {
+            updates.push(`updated_at = NOW()`);
+            values.push(req.user.id);
 
-        await query(
-            `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramIndex}`,
-            values
-        );
+            await query(
+                `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramIndex}`,
+                values
+            );
+        }
+
+        // Update employer company_name if provided
+        if (company_name !== undefined) {
+            await query(
+                `UPDATE employer_profiles SET company_name = $1, updated_at = NOW() WHERE user_id = $2`,
+                [company_name.substring(0, 100), req.user.id]
+            );
+        }
 
         res.json({ message: 'تم تحديث الملف الشخصي' });
     } catch (err) {
@@ -168,11 +182,12 @@ router.get('/:id', auth, async (req, res) => {
 
         const { rows } = await query(
             `SELECT u.id, u.name, u.role, u.lat, u.lng, u.phone_visibility, u.is_active,
-        u.avatar_url,
+        u.avatar_url, u.whatsapp_opt_in,
         u.governorate_id, u.district_id, u.avg_rating, u.rating_count,
         g.name_ar as governorate_name, d.name_ar as district_name,
         wp.category_ids, wp.experience_years, wp.available_hours, wp.bio,
         wp.clinic_name, wp.specialty, wp.work_days,
+        (SELECT string_agg(jc.name_ar, '، ') FROM job_categories jc WHERE jc.id = ANY(wp.category_ids)) as categories_text,
         ep.company_name
        FROM users u
        LEFT JOIN governorates g ON u.governorate_id = g.id
