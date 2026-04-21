@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 /* global __BACKEND_URL__ */
-const API_BASE_URL = import.meta.env.DEV ? '/api' : `${__BACKEND_URL__}/api`;
+const PROD_BACKEND = (import.meta.env.VITE_API_ORIGIN || __BACKEND_URL__ || '').replace(/\/+$/, '');
+const API_BASE_URL = import.meta.env.DEV ? '/api' : `${PROD_BACKEND}/api`;
 
 console.log('[api] mode:', import.meta.env.MODE);
 console.log('[api] baseURL:', API_BASE_URL);
