@@ -7,10 +7,19 @@ const MIN_SIDE = 96;
 function parseDataUrl(dataUrl) {
     if (typeof dataUrl !== 'string') return null;
     const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=\s]+)$/);
-    if (!match) return null;
-    const mime = match[1].toLowerCase();
-    const base64 = match[2].replace(/\s+/g, '');
-    return { mime, base64 };
+    if (match) {
+        const mime = match[1].toLowerCase();
+        const base64 = match[2].replace(/\s+/g, '');
+        return { mime, base64 };
+    }
+
+    // Backward compatibility: some clients send raw base64 without data URL prefix.
+    const cleaned = dataUrl.replace(/\s+/g, '');
+    if (/^[A-Za-z0-9+/=]+$/.test(cleaned) && cleaned.length >= 50) {
+        return { mime: 'image/jpeg', base64: cleaned };
+    }
+
+    return null;
 }
 
 function skinLikePixel(r, g, b) {

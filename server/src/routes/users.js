@@ -186,7 +186,7 @@ router.get('/:id', auth, async (req, res) => {
         u.governorate_id, u.district_id, u.avg_rating, u.rating_count,
         g.name_ar as governorate_name, d.name_ar as district_name,
         wp.category_ids, wp.experience_years, wp.available_hours, wp.bio,
-        wp.clinic_name, wp.specialty, wp.work_days,
+        wp.clinic_name, wp.specialty, wp.work_days, wp.available_from, wp.available_to,
         (SELECT string_agg(jc.name_ar, '، ') FROM job_categories jc WHERE jc.id = ANY(wp.category_ids)) as categories_text,
         ep.company_name
        FROM users u

@@ -7,7 +7,11 @@ const router = express.Router();
 router.get('/', async (req, res) => {
     try {
         const { rows } = await query(
-            'SELECT * FROM job_categories WHERE is_active = true ORDER BY sort_order'
+            `SELECT DISTINCT ON (lower(trim(name_ar)))
+                id, name_ar, icon, sort_order, is_active
+             FROM job_categories
+             WHERE is_active = true
+             ORDER BY lower(trim(name_ar)), sort_order ASC, id ASC`
         );
         res.json({ categories: rows });
     } catch (err) {

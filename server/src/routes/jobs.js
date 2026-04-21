@@ -109,10 +109,13 @@ router.get('/browse', auth, async (req, res) => {
             params
         );
 
-        const jobs = rows.map(j => ({
-            ...j,
-            distance_km: j.distance_meters ? Math.round(j.distance_meters / 100) / 10 : null,
-        }));
+        const jobs = rows.map(j => {
+            if (j.distance_meters === null || j.distance_meters === undefined) {
+                return { ...j, distance_km: null };
+            }
+            const km = Math.round(j.distance_meters / 100) / 10;
+            return { ...j, distance_km: km === 0 ? 0.1 : km };
+        });
 
         res.json({ jobs, page: parseInt(page), limit: parseInt(limit) });
     } catch (err) {

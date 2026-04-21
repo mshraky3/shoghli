@@ -18,13 +18,17 @@ router.put('/profile', auth, requireRole('worker'), async (req, res) => {
     try {
         const { category_ids, experience_years, available_hours, available_from, available_to, search_radius, bio, clinic_name, specialty, work_days } = req.body;
 
+        const normalizedCategoryIds = Array.isArray(category_ids)
+            ? [...new Set(category_ids.map((v) => parseInt(v, 10)).filter(Number.isInteger))]
+            : category_ids;
+
         const updates = [];
         const values = [];
         let i = 1;
 
         if (category_ids !== undefined) {
             updates.push(`category_ids = $${i++}`);
-            values.push(category_ids);
+            values.push(normalizedCategoryIds);
         }
         if (experience_years !== undefined) {
             updates.push(`experience_years = $${i++}`);
@@ -125,6 +129,7 @@ router.get('/nearby', auth, async (req, res) => {
         u.governorate_id, u.district_id, u.avg_rating, u.rating_count,
         g.name_ar as governorate_name, d.name_ar as district_name,
         wp.category_ids, wp.experience_years, wp.available_hours, wp.bio,
+        (SELECT string_agg(jc.name_ar, '، ') FROM job_categories jc WHERE jc.id = ANY(wp.category_ids)) as categories_text,
         (6371000 * acos(
           cos(radians($1)) * cos(radians(u.lat)) * cos(radians(u.lng) - radians($2)) +
           sin(radians($1)) * sin(radians(u.lat))
@@ -152,7 +157,12 @@ router.get('/nearby', auth, async (req, res) => {
         const workers = rows.map(w => {
             const worker = { ...w };
             if (worker.phone_visibility !== 'public') delete worker.phone;
-            worker.distance_km = Math.round(worker.distance_meters / 100) / 10;
+            if (worker.distance_meters === null || worker.distance_meters === undefined) {
+                worker.distance_km = null;
+            } else {
+                const km = Math.round(worker.distance_meters / 100) / 10;
+                worker.distance_km = km === 0 ? 0.1 : km;
+            }
             return worker;
         });
 
