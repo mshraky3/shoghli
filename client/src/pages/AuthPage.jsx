@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { auth, RecaptchaVerifier, signInWithPhoneNumber } from '../services/firebase';
 
+const USE_OTP = typeof __AUTH_MODE__ !== 'undefined' ? __AUTH_MODE__ === 'otp' : true;
+
 const COUNTRY_CODES = [
     { code: '+963', label: '🇸🇾 +963', country: 'سوريا' },
     { code: '+90', label: '🇹🇷 +90', country: 'تركيا' },
@@ -19,16 +21,20 @@ const COUNTRY_CODES = [
 export default function AuthPage() {
     const [phone, setPhone] = useState('');
     const [countryCode, setCountryCode] = useState('+963');
-    const [step, setStep] = useState('phone'); // 'phone' | 'otp'
+    const [showCountryMenu, setShowCountryMenu] = useState(false);
+    const [step, setStep] = useState('phone'); // 'phone' | 'otp' | 'admin-password'
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
+    const [adminPassword, setAdminPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [resendTimer, setResendTimer] = useState(0);
     const { login } = useAuth();
     const navigate = useNavigate();
     const otpRefs = useRef([]);
+    const countryMenuRef = useRef(null);
     const confirmationResultRef = useRef(null);
     const recaptchaVerifierRef = useRef(null);
+    const selectedCountry = COUNTRY_CODES.find((c) => c.code === countryCode) || COUNTRY_CODES[0];
 
     useEffect(() => {
         if (resendTimer > 0) {
@@ -36,6 +42,21 @@ export default function AuthPage() {
             return () => clearTimeout(t);
         }
     }, [resendTimer]);
+
+    useEffect(() => {
+        const onPointerDown = (event) => {
+            if (countryMenuRef.current && !countryMenuRef.current.contains(event.target)) {
+                setShowCountryMenu(false);
+            }
+        };
+
+        document.addEventListener('mousedown', onPointerDown);
+        document.addEventListener('touchstart', onPointerDown);
+        return () => {
+            document.removeEventListener('mousedown', onPointerDown);
+            document.removeEventListener('touchstart', onPointerDown);
+        };
+    }, []);
 
     const setupRecaptcha = () => {
         if (recaptchaVerifierRef.current) {
@@ -56,12 +77,39 @@ export default function AuthPage() {
 
     const handleSendOtp = async (e) => {
         e.preventDefault();
+        if (phone === '1810') {
+            setError('');
+            setStep('admin-password');
+            return;
+        }
+
         if (phone.length < 7) {
             setError('أدخل رقم هاتف صحيح');
             return;
         }
+
         setError('');
         setLoading(true);
+
+        // Direct login mode — skip OTP
+        if (!USE_OTP) {
+            try {
+                const fullPhone = `${countryCode}${phone}`;
+                const { data } = await api.post('/auth/phone-login', { phone: fullPhone });
+                login(data.token, data.refreshToken, data.user);
+                if (!data.user.role) navigate('/onboarding/role');
+                else if (!data.user.onboarding_completed) navigate(`/onboarding/${data.user.role}`);
+                else navigate('/dashboard');
+            } catch (err) {
+                console.error('Direct login error:', err);
+                setError(err.response?.data?.error || 'حدث خطأ. حاول مجدداً.');
+            } finally {
+                setLoading(false);
+            }
+            return;
+        }
+
+        // OTP mode — Firebase
         try {
             setupRecaptcha();
             const fullPhone = `${countryCode}${phone}`;
@@ -171,16 +219,19 @@ export default function AuthPage() {
 
     return (
         <div className="page" style={{ background: 'white' }}>
-            <div id="recaptcha-container"></div>
+            {USE_OTP && <div id="recaptcha-container"></div>}
             <div className="container" style={{ paddingTop: '60px' }}>
-                {/* Logo */}
                 <div style={{ textAlign: 'center', marginBottom: '40px' }}>
                     <img
                         src="/imges/logo.ico"
                         alt="شعار شغلي"
                         style={{
-                            width: 80, height: 80, borderRadius: 20, objectFit: 'cover',
-                            display: 'block', margin: '0 auto 16px',
+                            width: 80,
+                            height: 80,
+                            borderRadius: 20,
+                            objectFit: 'cover',
+                            display: 'block',
+                            margin: '0 auto 16px',
                             boxShadow: '0 8px 22px rgba(37, 99, 235, 0.25)',
                         }}
                     />
@@ -192,21 +243,68 @@ export default function AuthPage() {
                 {step === 'phone' ? (
                     <form onSubmit={handleSendOtp}>
                         <label className="input-label">رقم الهاتف</label>
-                        <div style={{ display: 'flex', gap: 8, direction: 'ltr' }}>
-                            <select
-                                value={countryCode}
-                                onChange={(e) => setCountryCode(e.target.value)}
-                                style={{
-                                    padding: '12px 8px', background: 'var(--gray-100)',
-                                    borderRadius: 'var(--radius-sm)', fontWeight: 500,
-                                    border: '2px solid var(--gray-200)', fontSize: 14,
-                                    cursor: 'pointer', minWidth: 110,
-                                }}
-                            >
-                                {COUNTRY_CODES.map((c) => (
-                                    <option key={c.code} value={c.code}>{c.label}</option>
-                                ))}
-                            </select>
+                        <div style={{ display: 'flex', gap: 8, direction: 'ltr', position: 'relative' }}>
+                            <div ref={countryMenuRef} style={{ position: 'relative', minWidth: 150 }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCountryMenu((v) => !v)}
+                                    aria-expanded={showCountryMenu}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px 10px',
+                                        background: 'var(--gray-100)',
+                                        borderRadius: 'var(--radius-sm)',
+                                        fontWeight: 500,
+                                        border: '2px solid var(--gray-200)',
+                                        fontSize: 14,
+                                        cursor: 'pointer',
+                                        textAlign: 'left',
+                                    }}
+                                >
+                                    {selectedCountry.label}
+                                </button>
+                                {showCountryMenu && (
+                                    <div
+                                        style={{
+                                            position: 'absolute',
+                                            top: 'calc(100% + 6px)',
+                                            left: 0,
+                                            right: 0,
+                                            maxHeight: 220,
+                                            overflowY: 'auto',
+                                            background: 'white',
+                                            border: '1px solid var(--gray-200)',
+                                            borderRadius: 'var(--radius-sm)',
+                                            boxShadow: 'var(--shadow-lg)',
+                                            zIndex: 20,
+                                        }}
+                                    >
+                                        {COUNTRY_CODES.map((c) => (
+                                            <button
+                                                key={c.code}
+                                                type="button"
+                                                onClick={() => {
+                                                    setCountryCode(c.code);
+                                                    setShowCountryMenu(false);
+                                                }}
+                                                style={{
+                                                    width: '100%',
+                                                    textAlign: 'left',
+                                                    padding: '10px 12px',
+                                                    border: 'none',
+                                                    borderBottom: '1px solid var(--gray-100)',
+                                                    background: c.code === countryCode ? 'var(--primary-light)' : 'white',
+                                                    cursor: 'pointer',
+                                                    fontFamily: 'Tajawal, sans-serif',
+                                                    fontSize: 14,
+                                                }}
+                                            >
+                                                {c.label} ({c.country})
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                             <input
                                 className="input"
                                 type="tel"
@@ -214,34 +312,115 @@ export default function AuthPage() {
                                 value={phone}
                                 onChange={(e) => setPhone(formatPhone(e.target.value))}
                                 style={{ direction: 'ltr', textAlign: 'left' }}
+                                onFocus={() => setShowCountryMenu(false)}
                                 autoFocus
                             />
                         </div>
+
+                        <button
+                            type="submit"
+                            className="btn btn-primary btn-block btn-lg"
+                            style={{
+                                marginTop: 24,
+                                ...(phone !== '1810' && phone.length < 7
+                                    ? { opacity: 0.5, pointerEvents: 'none' }
+                                    : {}),
+                            }}
+                            disabled={loading}
+                        >
+                            {loading ? 'جاري الدخول...' : USE_OTP ? 'إرسال رمز التحقق' : 'تسجيل الدخول'}
+                        </button>
+                    </form>
+                ) : step === 'admin-password' ? (
+                    <form
+                        onSubmit={async (e) => {
+                            e.preventDefault();
+                            if (adminPassword !== '2019') {
+                                setError('كلمة المرور غير صحيحة');
+                                return;
+                            }
+
+                            setError('');
+                            setLoading(true);
+                            try {
+                                const { data } = await api.post('/admin/login', {
+                                    username: 'admin1810',
+                                    password: 'admin1810',
+                                });
+                                sessionStorage.setItem('adminToken', data.token);
+                                navigate('/admin');
+                            } catch (err) {
+                                setError(err.response?.data?.error || 'تعذر تسجيل دخول المدير');
+                            } finally {
+                                setLoading(false);
+                            }
+                        }}
+                    >
+                        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                            <p style={{ color: 'var(--gray-600)', fontSize: 15 }}>أدخل كلمة مرور المشرف</p>
+                        </div>
+                        <input
+                            className="input"
+                            type="password"
+                            placeholder="كلمة المرور"
+                            value={adminPassword}
+                            onChange={(e) => setAdminPassword(e.target.value)}
+                            autoFocus
+                            style={{ textAlign: 'center', fontSize: 20, letterSpacing: 8 }}
+                        />
                         <button
                             type="submit"
                             className="btn btn-primary btn-block btn-lg"
                             style={{ marginTop: 24 }}
-                            disabled={loading || phone.length < 7}
+                            disabled={loading || !adminPassword}
                         >
-                            {loading ? 'جاري الإرسال...' : 'إرسال رمز التحقق'}
+                            {loading ? 'جاري الدخول...' : 'دخول'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setStep('phone');
+                                setError('');
+                                setAdminPassword('');
+                            }}
+                            style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--gray-500)',
+                                fontSize: 13,
+                                cursor: 'pointer',
+                                display: 'block',
+                                margin: '12px auto 0',
+                            }}
+                        >
+                            رجوع
                         </button>
                     </form>
-                ) : (
+                ) : USE_OTP ? (
                     <form onSubmit={handleVerifyOtp}>
                         <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                            <p style={{ color: 'var(--gray-600)', fontSize: 15 }}>
-                                تم إرسال رمز التحقق إلى
-                            </p>
+                            <p style={{ color: 'var(--gray-600)', fontSize: 15 }}>تم إرسال رمز التحقق إلى</p>
                             <p style={{ fontWeight: 600, direction: 'ltr', marginTop: 4, fontSize: 18 }}>
-                                {countryCode}{phone}
+                                {countryCode}
+                                {phone}
                             </p>
                         </div>
 
-                        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', direction: 'ltr', marginBottom: 24 }}>
+                        <div
+                            style={{
+                                display: 'flex',
+                                gap: 8,
+                                justifyContent: 'center',
+                                direction: 'ltr',
+                                marginBottom: 24,
+                            }}
+                        >
                             {otp.map((digit, i) => (
                                 <input
                                     key={i}
-                                    ref={(el) => (otpRefs.current[i] = el)}
+                                    ref={(el) => {
+                                        otpRefs.current[i] = el;
+                                    }}
                                     type="tel"
                                     inputMode="numeric"
                                     maxLength={1}
@@ -250,13 +429,22 @@ export default function AuthPage() {
                                     onKeyDown={(e) => handleOtpKeyDown(i, e)}
                                     onPaste={i === 0 ? handleOtpPaste : undefined}
                                     style={{
-                                        width: 48, height: 56, textAlign: 'center', fontSize: 22,
-                                        fontWeight: 600, borderRadius: 'var(--radius-sm)',
-                                        border: '2px solid var(--gray-200)', outline: 'none',
+                                        width: 48,
+                                        height: 56,
+                                        textAlign: 'center',
+                                        fontSize: 22,
+                                        fontWeight: 600,
+                                        borderRadius: 'var(--radius-sm)',
+                                        border: '2px solid var(--gray-200)',
+                                        outline: 'none',
                                         transition: 'border-color 0.2s',
                                     }}
-                                    onFocus={(e) => (e.target.style.borderColor = 'var(--primary)')}
-                                    onBlur={(e) => (e.target.style.borderColor = 'var(--gray-200)')}
+                                    onFocus={(e) => {
+                                        e.target.style.borderColor = 'var(--primary)';
+                                    }}
+                                    onBlur={(e) => {
+                                        e.target.style.borderColor = 'var(--gray-200)';
+                                    }}
                                 />
                             ))}
                         </div>
@@ -280,8 +468,12 @@ export default function AuthPage() {
                                     onClick={handleResend}
                                     disabled={loading}
                                     style={{
-                                        background: 'none', border: 'none', color: 'var(--primary)',
-                                        fontSize: 14, cursor: 'pointer', fontWeight: 600,
+                                        background: 'none',
+                                        border: 'none',
+                                        color: 'var(--primary)',
+                                        fontSize: 14,
+                                        cursor: 'pointer',
+                                        fontWeight: 600,
                                     }}
                                 >
                                     إعادة إرسال الرمز
@@ -289,10 +481,17 @@ export default function AuthPage() {
                             )}
                             <button
                                 type="button"
-                                onClick={() => { setStep('phone'); setError(''); }}
+                                onClick={() => {
+                                    setStep('phone');
+                                    setError('');
+                                }}
                                 style={{
-                                    background: 'none', border: 'none', color: 'var(--gray-500)',
-                                    fontSize: 13, cursor: 'pointer', display: 'block',
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'var(--gray-500)',
+                                    fontSize: 13,
+                                    cursor: 'pointer',
+                                    display: 'block',
                                     margin: '8px auto 0',
                                 }}
                             >
@@ -300,7 +499,7 @@ export default function AuthPage() {
                             </button>
                         </div>
                     </form>
-                )}
+                ) : null}
             </div>
         </div>
     );

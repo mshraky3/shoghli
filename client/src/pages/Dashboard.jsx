@@ -7,7 +7,7 @@ import api from '../services/api';
 import BottomNav from '../components/BottomNav';
 import {
     MapPin, Phone, PhoneForwarded, Search, List, Map as MapIcon,
-    Star, Briefcase, Clock, Navigation, User, LocateFixed, MessageCircle,
+    Star, Briefcase, Clock, User, MessageCircle,
     DollarSign, Building2
 } from 'lucide-react';
 
@@ -37,6 +37,17 @@ const CATEGORY_ICONS = {
     'chef-hat': '👨‍🍳', 'scissors': '✂️', 'briefcase': '💼',
 };
 
+const dedupeCategories = (items = []) => {
+    const seen = new Set();
+    return items.filter((cat) => {
+        const key = (cat?.name_ar || '').trim().toLowerCase();
+        if (!key) return false;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+};
+
 const SYRIA_BOUNDS = [[32.3, 35.5], [37.4, 42.5]];
 const SYRIA_CENTER = [35.0, 38.5];
 
@@ -60,7 +71,6 @@ export default function Dashboard() {
     const [isAvailable, setIsAvailable] = useState(user?.is_active !== false);
     const [searchPoint, setSearchPoint] = useState(user?.lat && user?.lng ? { lat: user.lat, lng: user.lng } : null);
     const [locationLabel, setLocationLabel] = useState('موقع غير محدد');
-    const [locating, setLocating] = useState(false);
     const [workerTab, setWorkerTab] = useState('jobs');
 
     const center = searchPoint ? [searchPoint.lat, searchPoint.lng] : SYRIA_CENTER;
@@ -75,8 +85,16 @@ export default function Dashboard() {
     const radiusMeta = radiusOptions.find(r => r.v === radius) || radiusOptions[2];
 
     useEffect(() => {
-        api.get('/categories').then(({ data }) => setCategories(data.categories || [])).catch(() => { });
+        api.get('/categories')
+            .then(({ data }) => setCategories(dedupeCategories(data.categories || [])))
+            .catch(() => { });
     }, []);
+
+    useEffect(() => {
+        if (!searchPoint && user?.lat && user?.lng) {
+            setSearchPoint({ lat: parseFloat(user.lat), lng: parseFloat(user.lng) });
+        }
+    }, [user?.lat, user?.lng, searchPoint]);
 
     useEffect(() => {
         if (!searchPoint) return;
@@ -128,19 +146,6 @@ export default function Dashboard() {
             else searchWorkers();
         }
     }, [searchWorkers, searchJobs, user?.role, workerTab]);
-
-    const refreshSearchLocation = () => {
-        if (!navigator.geolocation) return;
-        setLocating(true);
-        navigator.geolocation.getCurrentPosition(
-            ({ coords }) => {
-                setSearchPoint({ lat: coords.latitude, lng: coords.longitude });
-                setLocating(false);
-            },
-            () => setLocating(false),
-            { enableHighAccuracy: true, timeout: 10000 }
-        );
-    };
 
     const toggleAvailability = async () => {
         try {
@@ -264,9 +269,6 @@ export default function Dashboard() {
                             <div className="dash-selection-head">
                                 <span className="dash-selection-label">منطقة البحث:</span>
                                 <span className="dash-selection-value">{locationLabel}</span>
-                                <button className="dash-selection-refresh" onClick={refreshSearchLocation} disabled={locating}>
-                                    <Navigation size={13} /> {locating ? 'جاري...' : 'تحديث'}
-                                </button>
                             </div>
                             <div className="dash-radius-bar">
                                 {radiusOptions.map(r => (
@@ -376,7 +378,7 @@ export default function Dashboard() {
                                             className={`wcard-btn ${w.phone_visibility === 'public' ? 'call' : 'request'}`}>
                                             {w.phone_visibility === 'public' ? <><Phone size={15} /> اتصل</> : <><PhoneForwarded size={15} /> طلب اتصال</>}
                                         </button>
-                                        {w.phone_visibility === 'public' && w.phone && (
+                                        {w.phone_visibility === 'public' && w.phone && w.whatsapp_opt_in === true && (
                                             <button onClick={(e) => { e.stopPropagation(); openWhatsApp(w.phone); }}
                                                 className="wcard-btn whatsapp">
                                                 <MessageCircle size={15} /> واتساب
@@ -440,24 +442,14 @@ export default function Dashboard() {
                 ) : null}
             </main>
 
-            {/* Location required overlay */}
             {!searchPoint && (
-                <div className="modal-overlay" style={{ alignItems: 'center' }}>
-                    <div className="dash-location-popup">
-                        <div className="dash-location-popup-icon">
-                            <LocateFixed size={48} strokeWidth={1.5} />
-                        </div>
-                        <h2>حدّد موقعك أولاً</h2>
-                        <p>لعرض المحتوى القريب منك، نحتاج الوصول إلى موقعك أو يمكنك تحديده من الملف الشخصي</p>
-                        <button className="btn btn-primary btn-lg btn-block"
-                            onClick={refreshSearchLocation} disabled={locating} style={{ marginTop: 8 }}>
-                            <Navigation size={18} />
-                            {locating ? 'جاري تحديد الموقع...' : 'استخدم موقعي الحالي'}
-                        </button>
-                        <Link to="/profile" className="btn btn-secondary btn-block" style={{ marginTop: 8, textDecoration: 'none' }}>
-                            <MapPin size={18} /> تحديد موقع المنزل
-                        </Link>
-                    </div>
+                <div className="dash-empty" style={{ margin: '20px 16px' }}>
+                    <MapPin size={48} strokeWidth={1.2} />
+                    <p>لم يتم تحديد موقع المنزل بعد</p>
+                    <span>يمكنك تحديده أو تغييره من صفحة الحساب فقط</span>
+                    <Link to="/profile" className="btn btn-primary" style={{ marginTop: 12, textDecoration: 'none' }}>
+                        <MapPin size={16} /> فتح الحساب لتحديد الموقع
+                    </Link>
                 </div>
             )}
 

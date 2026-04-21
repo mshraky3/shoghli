@@ -8,7 +8,7 @@ import BottomNav from '../components/BottomNav';
 import {
     LogOut, Star, MapPin, Edit3, Check, ChevronLeft,
     Shield, FileText, Briefcase, Calendar, Clock, Eye, EyeOff,
-    Navigation, X
+    Navigation, X, MessageCircle
 } from 'lucide-react';
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -32,6 +32,17 @@ const CATEGORY_ICONS = {
     'car': '🚗', 'hammer': '🔨', 'paintbrush': '🎨', 'sparkles': '✨',
     'building': '🏗️', 'anvil': '⚒️', 'wrench': '🔩', 'wheat': '🌾',
     'chef-hat': '👨‍🍳', 'scissors': '✂️', 'briefcase': '💼',
+};
+
+const dedupeCategories = (items = []) => {
+    const seen = new Set();
+    return items.filter((cat) => {
+        const key = (cat?.name_ar || '').trim().toLowerCase();
+        if (!key) return false;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
 };
 
 function DraggableMarker({ position, onMove }) {
@@ -59,6 +70,7 @@ export default function ProfilePage() {
     const [editing, setEditing] = useState(false);
     const [name, setName] = useState(user?.name || '');
     const [phoneVisibility, setPhoneVisibility] = useState(user?.phone_visibility || 'request_only');
+    const [whatsappOptIn, setWhatsappOptIn] = useState(user?.whatsapp_opt_in === true);
     const [bio, setBio] = useState(user?.worker_profile?.bio || user?.bio || '');
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState('');
@@ -85,7 +97,13 @@ export default function ProfilePage() {
     }, [user?.avatar_url]);
 
     useEffect(() => {
-        api.get('/categories').then(({ data }) => setAllCategories(data.categories || [])).catch(() => { });
+        setWhatsappOptIn(user?.whatsapp_opt_in === true);
+    }, [user?.whatsapp_opt_in]);
+
+    useEffect(() => {
+        api.get('/categories')
+            .then(({ data }) => setAllCategories(dedupeCategories(data.categories || [])))
+            .catch(() => { });
     }, []);
 
     useEffect(() => {
@@ -105,7 +123,11 @@ export default function ProfilePage() {
         setSaving(true);
         setMessage('');
         try {
-            await api.put('/users/profile', { name, phone_visibility: phoneVisibility });
+            await api.put('/users/profile', {
+                name,
+                phone_visibility: phoneVisibility,
+                whatsapp_opt_in: whatsappOptIn,
+            });
             if (user?.role === 'worker') {
                 await api.put('/workers/profile', { bio, category_ids: selectedCategoryIds });
             }
@@ -282,15 +304,28 @@ export default function ProfilePage() {
                                 </div>
                                 <div className="prof-field">
                                     <label className="prof-field-label">إعداد رقم الهاتف</label>
+                                    <p className="prof-field-hint" style={{ marginBottom: 8 }}>
+                                        هذا الخيار يحدد طريقة تواصل الآخرين معك.
+                                    </p>
                                     <div className="prof-visibility-toggle">
                                         <button className={phoneVisibility === 'public' ? 'active' : ''}
                                             onClick={() => setPhoneVisibility('public')}>
-                                            <Eye size={16} /> عام
+                                            <Eye size={16} /> عام (اتصال مباشر)
                                         </button>
                                         <button className={phoneVisibility === 'request_only' ? 'active' : ''}
                                             onClick={() => setPhoneVisibility('request_only')}>
-                                            <EyeOff size={16} /> بطلب فقط
+                                            <EyeOff size={16} /> بطلب فقط (طلب اتصال)
                                         </button>
+                                    </div>
+                                    <div style={{ marginTop: 10 }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={whatsappOptIn}
+                                                onChange={(e) => setWhatsappOptIn(e.target.checked)}
+                                            />
+                                            <span>السماح بإظهار زر واتساب عندما يكون رقم الهاتف عاماً</span>
+                                        </label>
                                     </div>
                                 </div>
 
@@ -364,7 +399,11 @@ export default function ProfilePage() {
                                     <span className="prof-info-icon">
                                         {phoneVisibility === 'public' ? <Eye size={16} /> : <EyeOff size={16} />}
                                     </span>
-                                    <span>الهاتف: {phoneVisibility === 'public' ? 'عام' : 'بطلب فقط'}</span>
+                                    <span>الهاتف: {phoneVisibility === 'public' ? 'عام (اتصال مباشر)' : 'بطلب فقط (طلب اتصال)'}</span>
+                                </div>
+                                <div className="prof-info-row">
+                                    <span className="prof-info-icon"><MessageCircle size={16} /></span>
+                                    <span>زر واتساب: {whatsappOptIn ? 'مفعل' : 'غير مفعل'}</span>
                                 </div>
                                 {/* Work days */}
                                 {wp?.work_days?.length > 0 && (
@@ -405,6 +444,16 @@ export default function ProfilePage() {
                                     onClick={() => setPhoneVisibility('request_only')}>
                                     <EyeOff size={16} /> بطلب فقط
                                 </button>
+                            </div>
+                            <div style={{ marginTop: 10 }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={whatsappOptIn}
+                                        onChange={(e) => setWhatsappOptIn(e.target.checked)}
+                                    />
+                                    <span>السماح بإظهار زر واتساب عندما يكون رقم الهاتف عاماً</span>
+                                </label>
                             </div>
                         </div>
                         <div className="prof-field">

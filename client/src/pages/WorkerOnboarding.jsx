@@ -45,6 +45,17 @@ const CATEGORY_ICONS = {
 
 const DOCTOR_CATEGORY_IDS = [4, 16, 19];
 
+const dedupeCategories = (items = []) => {
+    const seen = new Set();
+    return items.filter((cat) => {
+        const key = (cat?.name_ar || '').trim().toLowerCase();
+        if (!key) return false;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+};
+
 const DAYS_OF_WEEK = [
     { value: 0, label: 'الأحد' },
     { value: 1, label: 'الإثنين' },
@@ -120,8 +131,11 @@ export default function WorkerOnboarding() {
 
     useEffect(() => {
         api.get('/categories')
-            .then(({ data }) => setAllCategories(data.categories?.length ? data.categories : FALLBACK_CATEGORIES))
-            .catch(() => setAllCategories(FALLBACK_CATEGORIES));
+            .then(({ data }) => {
+                const source = data.categories?.length ? data.categories : FALLBACK_CATEGORIES;
+                setAllCategories(dedupeCategories(source));
+            })
+            .catch(() => setAllCategories(dedupeCategories(FALLBACK_CATEGORIES)));
     }, []);
 
     const requestLocation = () => {

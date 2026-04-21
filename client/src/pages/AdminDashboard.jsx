@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Navigate } from 'react-router-dom';
 import { API_BASE_URL } from '../services/api';
 
 function adminFetch(path, token, options = {}) {
@@ -18,10 +19,6 @@ function adminFetch(path, token, options = {}) {
 
 export default function AdminDashboard() {
     const [token, setToken] = useState(() => sessionStorage.getItem('adminToken') || '');
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [loginError, setLoginError] = useState('');
-    const [loginLoading, setLoginLoading] = useState(false);
 
     const [tab, setTab] = useState('stats');
     const [stats, setStats] = useState(null);
@@ -35,27 +32,6 @@ export default function AdminDashboard() {
     const [reportsStatus, setReportsStatus] = useState('pending');
     const [loading, setLoading] = useState(false);
     const [actionMsg, setActionMsg] = useState('');
-
-    const handleLogin = async (e) => {
-        e.preventDefault();
-        setLoginError('');
-        setLoginLoading(true);
-        try {
-            const res = await fetch(`${API_BASE_URL}/admin/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password }),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'خطأ');
-            sessionStorage.setItem('adminToken', data.token);
-            setToken(data.token);
-        } catch (err) {
-            setLoginError(err.message);
-        } finally {
-            setLoginLoading(false);
-        }
-    };
 
     const logout = useCallback(() => {
         sessionStorage.removeItem('adminToken');
@@ -160,53 +136,21 @@ export default function AdminDashboard() {
         setTimeout(() => setActionMsg(''), 3000);
     };
 
-    // Login form
+    // Admin access is handled in AuthPage (1810 + password)
     if (!token) {
-        return (
-            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f1f5f9' }}>
-                <form onSubmit={handleLogin} style={{
-                    background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 24px rgba(0,0,0,0.1)',
-                    width: '100%', maxWidth: 380,
-                }}>
-                    <h2 style={{ textAlign: 'center', marginBottom: 24, color: '#1e293b' }}>لوحة تحكم المدير</h2>
-                    {loginError && <div style={{ background: '#fef2f2', color: '#dc2626', padding: '10px 14px', borderRadius: 8, marginBottom: 16, fontSize: 14, textAlign: 'center' }}>{loginError}</div>}
-                    <div style={{ marginBottom: 16 }}>
-                        <label style={{ display: 'block', marginBottom: 6, fontSize: 14, fontWeight: 500 }}>اسم المستخدم</label>
-                        <input
-                            type="text"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '2px solid #e2e8f0', fontSize: 15, direction: 'ltr' }}
-                            autoFocus
-                        />
-                    </div>
-                    <div style={{ marginBottom: 24 }}>
-                        <label style={{ display: 'block', marginBottom: 6, fontSize: 14, fontWeight: 500 }}>كلمة المرور</label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '2px solid #e2e8f0', fontSize: 15, direction: 'ltr' }}
-                        />
-                    </div>
-                    <button
-                        type="submit"
-                        disabled={loginLoading || !username || !password}
-                        style={{
-                            width: '100%', padding: '14px', background: '#2563eb', color: 'white', border: 'none',
-                            borderRadius: 10, fontSize: 16, fontWeight: 600, cursor: 'pointer',
-                            opacity: loginLoading ? 0.7 : 1,
-                        }}
-                    >
-                        {loginLoading ? 'جاري الدخول...' : 'دخول'}
-                    </button>
-                </form>
-            </div>
-        );
+        return <Navigate to="/auth" replace />;
     }
 
     const roleLabel = (r) => r === 'worker' ? 'عامل' : r === 'employer' ? 'صاحب عمل' : r || '—';
     const reasonLabel = (r) => ({ inappropriate: 'محتوى غير لائق', fake: 'حساب مزيف', dating: 'مواعدة', spam: 'سبام', harassment: 'تحرش', other: 'أخرى' }[r] || r);
+    const jobsStatusLabel = (s) => ({ active: 'نشطة', filled: 'مكتملة', cancelled: 'ملغاة' }[s] || s);
+    const requestsStatusLabel = (s) => ({ pending: 'معلقة', accepted: 'مقبولة', rejected: 'مرفوضة' }[s] || s);
+    const reportsStatusLabel = (s) => ({ pending: 'معلقة', reviewed: 'قيد المراجعة', resolved: 'محلولة', dismissed: 'مرفوضة' }[s] || s);
+
+    const signupMax = Math.max(1, ...(stats?.recentSignups || []).map((d) => d.count));
+    const jobsStatusTotal = Math.max(1, (stats?.jobsByStatus || []).reduce((sum, item) => sum + item.count, 0));
+    const requestsStatusTotal = Math.max(1, (stats?.requestsByStatus || []).reduce((sum, item) => sum + item.count, 0));
+    const reportsStatusTotal = Math.max(1, (stats?.reportsByStatus || []).reduce((sum, item) => sum + item.count, 0));
 
     return (
         <div style={{ minHeight: '100vh', background: '#f1f5f9', direction: 'rtl' }}>
@@ -255,6 +199,8 @@ export default function AdminDashboard() {
                                 { label: 'طلبات التواصل', value: stats.totalRequests, color: '#0891b2' },
                                 { label: 'محظورون', value: stats.blockedUsers, color: '#991b1b' },
                                 { label: 'جدد هذا الأسبوع', value: stats.newThisWeek, color: '#059669' },
+                                { label: 'جدد هذا الشهر', value: stats.newThisMonth, color: '#0f766e' },
+                                { label: 'مكتملو الإعداد', value: stats.onboardingCompleted, color: '#4338ca' },
                             ].map((s) => (
                                 <div key={s.label} style={{ background: 'white', borderRadius: 12, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
                                     <p style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>{s.label}</p>
@@ -262,6 +208,83 @@ export default function AdminDashboard() {
                                 </div>
                             ))}
                         </div>
+
+                        {/* Signups Trend */}
+                        {stats.recentSignups?.length > 0 && (
+                            <div style={{ background: 'white', borderRadius: 12, padding: 20, marginTop: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                                <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 14, color: '#1e293b' }}>تسجيل المستخدمين خلال آخر ٧ أيام</h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 8, alignItems: 'end', height: 170 }}>
+                                    {stats.recentSignups.map((d) => (
+                                        <div key={d.day} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                                            <span style={{ fontSize: 12, color: '#334155', fontWeight: 700 }}>{d.count}</span>
+                                            <div style={{ width: '100%', maxWidth: 46, borderRadius: 8, background: '#dbeafe', height: `${Math.max(8, (d.count / signupMax) * 110)}px`, transition: 'height .4s ease' }} />
+                                            <span style={{ fontSize: 11, color: '#64748b' }}>{new Date(d.day).toLocaleDateString('ar', { weekday: 'short' })}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16, marginTop: 16 }}>
+                            <div style={{ background: 'white', borderRadius: 12, padding: 18, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                                <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: '#1e293b' }}>توزيع الوظائف حسب الحالة</h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                    {(stats.jobsByStatus || []).map((item) => (
+                                        <div key={item.status}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 13, color: '#475569' }}>
+                                                <span>{jobsStatusLabel(item.status)}</span>
+                                                <strong>{item.count}</strong>
+                                            </div>
+                                            <div style={{ height: 10, borderRadius: 999, background: '#e2e8f0', overflow: 'hidden' }}>
+                                                <div style={{ height: '100%', width: `${(item.count / jobsStatusTotal) * 100}%`, background: '#2563eb' }} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div style={{ background: 'white', borderRadius: 12, padding: 18, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                                <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: '#1e293b' }}>توزيع طلبات التواصل</h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                    {(stats.requestsByStatus || []).map((item) => (
+                                        <div key={item.status}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 13, color: '#475569' }}>
+                                                <span>{requestsStatusLabel(item.status)}</span>
+                                                <strong>{item.count}</strong>
+                                            </div>
+                                            <div style={{ height: 10, borderRadius: 999, background: '#e2e8f0', overflow: 'hidden' }}>
+                                                <div style={{ height: '100%', width: `${(item.count / requestsStatusTotal) * 100}%`, background: '#0891b2' }} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {(stats.reportsByStatus || []).length > 0 && (
+                            <div style={{ background: 'white', borderRadius: 12, padding: 20, marginTop: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                                <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: '#1e293b' }}>توزيع البلاغات حسب الحالة</h3>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                    {stats.reportsByStatus.map((item) => (
+                                        <span key={item.status} style={{ background: '#fee2e2', color: '#991b1b', padding: '6px 12px', borderRadius: 999, fontSize: 13, fontWeight: 600 }}>
+                                            {reportsStatusLabel(item.status)}: {item.count}
+                                        </span>
+                                    ))}
+                                </div>
+                                <div style={{ marginTop: 12, height: 10, borderRadius: 999, background: '#fee2e2', overflow: 'hidden', display: 'flex' }}>
+                                    {(stats.reportsByStatus || []).map((item) => (
+                                        <div
+                                            key={`seg-${item.status}`}
+                                            style={{
+                                                width: `${(item.count / reportsStatusTotal) * 100}%`,
+                                                background: item.status === 'resolved' ? '#16a34a' : item.status === 'reviewed' ? '#0ea5e9' : item.status === 'dismissed' ? '#64748b' : '#dc2626',
+                                            }}
+                                            title={`${reportsStatusLabel(item.status)}: ${item.count}`}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* By Governorate */}
                         {stats.byGovernorate?.length > 0 && (

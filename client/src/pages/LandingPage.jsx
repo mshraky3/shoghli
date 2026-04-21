@@ -249,11 +249,15 @@ export default function LandingPage() {
                         <p>لديك سؤال أو اقتراح؟ يسعدنا سماعك</p>
                         <div className="landing-contact-grid">
                             <article>
+                                <strong>☎️ رقم الدعم والتواصل</strong>
+                                <a href="tel:0096362631081">0096362631081</a>
+                            </article>
+                            <article>
                                 <strong>📧 البريد الإلكتروني</strong>
                                 <a href="mailto:alshraky3@gmail.com">alshraky3@gmail.com</a>
                             </article>
                             <article>
-                                <strong>📱 واتساب</strong>
+                                <strong>📱 واتساب الدعم</strong>
                                 <a href="https://wa.me/96362631081" target="_blank" rel="noreferrer">0096362631081</a>
                             </article>
                         </div>

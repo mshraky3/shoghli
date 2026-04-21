@@ -159,9 +159,11 @@ export default function UserProfilePage() {
                             <a href={`tel:${profile.phone}`} className="btn btn-success btn-lg" style={{ flex: 1 }}>
                                 <Phone size={18} /> اتصل الآن
                             </a>
-                            <button onClick={() => openWhatsApp(profile.phone)} className="btn btn-lg btn-whatsapp" style={{ flex: 1 }}>
-                                <MessageCircle size={18} /> واتساب
-                            </button>
+                            {profile.whatsapp_opt_in && (
+                                <button onClick={() => openWhatsApp(profile.phone)} className="btn btn-lg btn-whatsapp" style={{ flex: 1 }}>
+                                    <MessageCircle size={18} /> واتساب
+                                </button>
+                            )}
                         </>
                     ) : profile.phone_visibility === 'public' ? (
                         <button onClick={sendCallRequest} className="btn btn-success btn-block btn-lg">

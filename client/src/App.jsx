@@ -13,6 +13,7 @@ import RequestsPage from './pages/RequestsPage';
 import NewJobPage from './pages/NewJobPage';
 import TermsPage from './pages/TermsPage';
 import AdminDashboard from './pages/AdminDashboard';
+import SeoManager from './components/SeoManager';
 
 function ProtectedRoute({ children }) {
     const { user, loading } = useAuth();
@@ -29,51 +30,54 @@ function AppRoutes() {
     }
 
     return (
-        <Routes>
-            <Route path="/auth" element={user ? <Navigate to="/" replace /> : <AuthPage />} />
+        <>
+            <SeoManager user={user} />
+            <Routes>
+                <Route path="/auth" element={user ? <Navigate to="/" replace /> : <AuthPage />} />
 
-            <Route path="/onboarding/role" element={
-                <ProtectedRoute><RoleSelectPage /></ProtectedRoute>
-            } />
-            <Route path="/onboarding/worker" element={
-                <ProtectedRoute><WorkerOnboarding /></ProtectedRoute>
-            } />
-            <Route path="/onboarding/employer" element={
-                <ProtectedRoute><EmployerOnboarding /></ProtectedRoute>
-            } />
+                <Route path="/onboarding/role" element={
+                    <ProtectedRoute><RoleSelectPage /></ProtectedRoute>
+                } />
+                <Route path="/onboarding/worker" element={
+                    <ProtectedRoute><WorkerOnboarding /></ProtectedRoute>
+                } />
+                <Route path="/onboarding/employer" element={
+                    <ProtectedRoute><EmployerOnboarding /></ProtectedRoute>
+                } />
 
-            <Route path="/dashboard" element={
-                <ProtectedRoute><Dashboard /></ProtectedRoute>
-            } />
-            <Route path="/profile" element={
-                <ProtectedRoute><ProfilePage /></ProtectedRoute>
-            } />
-            <Route path="/profile/:id" element={
-                <ProtectedRoute><UserProfilePage /></ProtectedRoute>
-            } />
-            <Route path="/notifications" element={
-                <ProtectedRoute><NotificationsPage /></ProtectedRoute>
-            } />
-            <Route path="/requests" element={
-                <ProtectedRoute><RequestsPage /></ProtectedRoute>
-            } />
-            <Route path="/job/new" element={
-                <ProtectedRoute><NewJobPage /></ProtectedRoute>
-            } />
+                <Route path="/dashboard" element={
+                    <ProtectedRoute><Dashboard /></ProtectedRoute>
+                } />
+                <Route path="/profile" element={
+                    <ProtectedRoute><ProfilePage /></ProtectedRoute>
+                } />
+                <Route path="/profile/:id" element={
+                    <ProtectedRoute><UserProfilePage /></ProtectedRoute>
+                } />
+                <Route path="/notifications" element={
+                    <ProtectedRoute><NotificationsPage /></ProtectedRoute>
+                } />
+                <Route path="/requests" element={
+                    <ProtectedRoute><RequestsPage /></ProtectedRoute>
+                } />
+                <Route path="/job/new" element={
+                    <ProtectedRoute><NewJobPage /></ProtectedRoute>
+                } />
 
-            <Route path="/terms" element={<TermsPage />} />
+                <Route path="/terms" element={<TermsPage />} />
 
-            <Route path="/" element={
-                user ? (
-                    !user.role ? <Navigate to="/onboarding/role" replace /> :
-                        !user.onboarding_completed ? <Navigate to={`/onboarding/${user.role}`} replace /> :
-                            <Navigate to="/dashboard" replace />
-                ) : <LandingPage />
-            } />
+                <Route path="/" element={
+                    user ? (
+                        !user.role ? <Navigate to="/onboarding/role" replace /> :
+                            !user.onboarding_completed ? <Navigate to={`/onboarding/${user.role}`} replace /> :
+                                <Navigate to="/dashboard" replace />
+                    ) : <LandingPage />
+                } />
 
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+        </>
     );
 }
 
