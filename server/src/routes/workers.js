@@ -104,6 +104,14 @@ router.put('/availability', auth, requireRole('worker'), async (req, res) => {
 // GET /api/workers/nearby — Search nearby workers (for employers)
 router.get('/nearby', auth, async (req, res) => {
     try {
+        // Block unapproved employers from searching workers; workers themselves pass through.
+        if (req.user.role === 'employer' && req.user.employer_status !== 'approved') {
+            return res.status(403).json({
+                error: 'حسابك قيد المراجعة. لا يمكنك البحث عن العمّال حتى تتم الموافقة على حسابك.',
+                employer_status: req.user.employer_status || 'pending_payment',
+            });
+        }
+
         const { lat, lng, radius, category_id, page = 1, limit = 20 } = req.query;
 
         if (!lat || !lng) {

@@ -1,12 +1,12 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { query } = require('../db/pool');
-const { auth, requireRole } = require('../middleware/auth');
+const { auth, requireRole, blockUnapprovedEmployer } = require('../middleware/auth');
 
 const router = express.Router();
 
 // POST /api/jobs — Create job post
-router.post('/', auth, requireRole('employer'),
+router.post('/', auth, requireRole('employer'), blockUnapprovedEmployer,
     body('category_id').isInt().withMessage('الفئة مطلوبة'),
     async (req, res) => {
         try {
@@ -33,7 +33,7 @@ router.post('/', auth, requireRole('employer'),
 );
 
 // GET /api/jobs — List employer's own jobs
-router.get('/', auth, requireRole('employer'), async (req, res) => {
+router.get('/', auth, requireRole('employer'), blockUnapprovedEmployer, async (req, res) => {
     try {
         const { rows } = await query(
             `SELECT jp.*, jc.name_ar as category_name, jc.icon as category_icon

@@ -48,7 +48,6 @@ router.get('/subdistricts', async (req, res) => {
             sql += ' WHERE district_id = $1';
             params.push(parseInt(district_id));
         }
-
         sql += ' ORDER BY name_ar';
         const { rows } = await query(sql, params);
         res.json({ subdistricts: rows });

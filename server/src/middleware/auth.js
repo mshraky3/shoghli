@@ -11,7 +11,7 @@ const auth = async (req, res, next) => {
         const token = header.split(' ')[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        const { rows } = await query('SELECT id, phone, role, name, onboarding_completed FROM users WHERE id = $1', [decoded.userId]);
+        const { rows } = await query('SELECT id, phone, role, name, onboarding_completed, employer_status FROM users WHERE id = $1', [decoded.userId]);
         if (rows.length === 0) {
             return res.status(401).json({ error: 'المستخدم غير موجود' });
         }
@@ -33,6 +33,18 @@ const requireRole = (...roles) => {
         }
         next();
     };
+};
+
+// Blocks employers whose account is not yet approved from marketplace actions.
+// No-op for workers (and any non-employer), so worker flows are untouched.
+const blockUnapprovedEmployer = (req, res, next) => {
+    if (req.user && req.user.role === 'employer' && req.user.employer_status !== 'approved') {
+        return res.status(403).json({
+            error: 'حسابك قيد المراجعة. لا يمكنك استخدام هذه الميزة حتى تتم الموافقة على حسابك.',
+            employer_status: req.user.employer_status || 'pending_payment',
+        });
+    }
+    next();
 };
 
 const requireAdmin = (req, res, next) => {
@@ -59,4 +71,4 @@ const requireAdmin = (req, res, next) => {
     }
 };
 
-module.exports = { auth, requireRole, requireAdmin };
+module.exports = { auth, requireRole, requireAdmin, blockUnapprovedEmployer };

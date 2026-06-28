@@ -17,6 +17,8 @@ const categoryRoutes = require('./routes/categories');
 const ratingRoutes = require('./routes/ratings');
 const reportRoutes = require('./routes/reports');
 const adminRoutes = require('./routes/admin');
+const settingsRoutes = require('./routes/settings');
+const employerApplicationRoutes = require('./routes/employerApplications');
 
 const app = express();
 
@@ -60,6 +62,8 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/employer-applications', employerApplicationRoutes);
 
 // Root + health check
 app.get('/', (req, res) => {

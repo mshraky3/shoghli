@@ -338,4 +338,136 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
     }
 });
 
+// ============================================
+// Employer applications (payment review)
+// ============================================
+
+// GET /api/admin/employer-applications?status=pending_review
+router.get('/employer-applications', requireAdmin, async (req, res) => {
+    try {
+        const status = req.query.status || 'pending_review';
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = 20;
+        const offset = (page - 1) * limit;
+
+        const countResult = await query(
+            'SELECT COUNT(*) as count FROM employer_applications WHERE status = $1',
+            [status]
+        );
+        const total = parseInt(countResult.rows[0].count);
+
+        const { rows } = await query(
+            `SELECT ea.id, ea.user_id, ea.payment_screenshot, ea.status, ea.rejection_reason,
+                    ea.created_at, ea.updated_at, ea.reviewed_at,
+                    u.name, u.phone, u.email,
+                    ep.company_name
+             FROM employer_applications ea
+             JOIN users u ON ea.user_id = u.id
+             LEFT JOIN employer_profiles ep ON ea.user_id = ep.user_id
+             WHERE ea.status = $1
+             ORDER BY ea.created_at ASC
+             LIMIT $2 OFFSET $3`,
+            [status, limit, offset]
+        );
+
+        res.json({
+            applications: rows,
+            pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+        });
+    } catch (err) {
+        console.error('admin employer applications error:', err);
+        res.status(500).json({ error: 'حدث خطأ في الخادم' });
+    }
+});
+
+// PUT /api/admin/employer-applications/:id/approve
+router.put('/employer-applications/:id/approve', requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { rows } = await query('SELECT user_id FROM employer_applications WHERE id = $1', [id]);
+        if (rows.length === 0) return res.status(404).json({ error: 'الطلب غير موجود' });
+        const userId = rows[0].user_id;
+
+        await query(
+            `UPDATE employer_applications
+             SET status = 'approved', rejection_reason = NULL, reviewed_by = $2, reviewed_at = NOW(), updated_at = NOW()
+             WHERE id = $1`,
+            [id, req.admin.adminId]
+        );
+        await query(
+            "UPDATE users SET employer_status = 'approved', updated_at = NOW() WHERE id = $1",
+            [userId]
+        );
+
+        res.json({ message: 'تمت الموافقة على الحساب' });
+    } catch (err) {
+        console.error('admin approve employer error:', err);
+        res.status(500).json({ error: 'حدث خطأ في الخادم' });
+    }
+});
+
+// PUT /api/admin/employer-applications/:id/reject
+router.put('/employer-applications/:id/reject', requireAdmin,
+    body('reason').optional().trim(),
+    async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { reason } = req.body;
+            const { rows } = await query('SELECT user_id FROM employer_applications WHERE id = $1', [id]);
+            if (rows.length === 0) return res.status(404).json({ error: 'الطلب غير موجود' });
+            const userId = rows[0].user_id;
+
+            await query(
+                `UPDATE employer_applications
+                 SET status = 'rejected', rejection_reason = $2, reviewed_by = $3, reviewed_at = NOW(), updated_at = NOW()
+                 WHERE id = $1`,
+                [id, reason || 'تم رفض الطلب', req.admin.adminId]
+            );
+            await query(
+                "UPDATE users SET employer_status = 'rejected', updated_at = NOW() WHERE id = $1",
+                [userId]
+            );
+
+            res.json({ message: 'تم رفض الطلب' });
+        } catch (err) {
+            console.error('admin reject employer error:', err);
+            res.status(500).json({ error: 'حدث خطأ في الخادم' });
+        }
+    }
+);
+
+// ============================================
+// App settings (Sham Cash number + fee)
+// ============================================
+
+// GET /api/admin/settings
+router.get('/settings', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await query('SELECT key, value FROM app_settings');
+        res.json({ settings: Object.fromEntries(rows.map(r => [r.key, r.value])) });
+    } catch (err) {
+        console.error('admin get settings error:', err);
+        res.status(500).json({ error: 'حدث خطأ في الخادم' });
+    }
+});
+
+// PUT /api/admin/settings
+router.put('/settings', requireAdmin, async (req, res) => {
+    try {
+        const allowed = ['sham_cash_phone', 'employer_fee_amount', 'employer_fee_currency'];
+        const entries = Object.entries(req.body).filter(([k]) => allowed.includes(k));
+        for (const [key, value] of entries) {
+            await query(
+                `INSERT INTO app_settings (key, value, updated_at) VALUES ($1, $2, NOW())
+                 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+                [key, value == null ? '' : String(value)]
+            );
+        }
+        res.json({ message: 'تم حفظ الإعدادات' });
+    } catch (err) {
+        console.error('admin put settings error:', err);
+        res.status(500).json({ error: 'حدث خطأ في الخادم' });
+    }
+});
+
 module.exports = router;

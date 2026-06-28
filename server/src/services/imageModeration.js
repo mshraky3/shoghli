@@ -132,6 +132,59 @@ async function moderateAndNormalizeAvatar(dataUrl) {
     };
 }
 
+// Validate + normalize a payment receipt screenshot.
+// Same MIME/size/dimension checks as avatars, but NO nudity heuristic (it's a receipt),
+// and a larger output size so receipt text stays legible for the admin reviewer.
+async function normalizePaymentScreenshot(dataUrl) {
+    const parsed = parseDataUrl(dataUrl);
+    if (!parsed) {
+        return { ok: false, error: 'صيغة الصورة غير صحيحة' };
+    }
+
+    if (!ALLOWED_MIME.has(parsed.mime)) {
+        return { ok: false, error: 'الأنواع المسموحة: JPG, PNG, WEBP' };
+    }
+
+    const inputBuffer = Buffer.from(parsed.base64, 'base64');
+
+    if (inputBuffer.length > MAX_UPLOAD_BYTES) {
+        return { ok: false, error: 'حجم الصورة كبير جداً (الحد 2MB)' };
+    }
+
+    let image;
+    try {
+        image = sharp(inputBuffer, { failOn: 'error' });
+    } catch (_err) {
+        return { ok: false, error: 'ملف الصورة تالف أو غير مدعوم' };
+    }
+
+    const metadata = await image.metadata().catch(() => null);
+    if (!metadata || !metadata.width || !metadata.height) {
+        return { ok: false, error: 'تعذر قراءة الصورة' };
+    }
+
+    if (metadata.width < MIN_SIDE || metadata.height < MIN_SIDE) {
+        return { ok: false, error: 'الصورة صغيرة جداً' };
+    }
+
+    const normalizedBuffer = await sharp(inputBuffer)
+        .rotate()
+        .resize(1080, 1080, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 80, mozjpeg: true })
+        .toBuffer()
+        .catch(() => null);
+
+    if (!normalizedBuffer) {
+        return { ok: false, error: 'تعذر معالجة الصورة' };
+    }
+
+    return {
+        ok: true,
+        imageDataUrl: `data:image/jpeg;base64,${normalizedBuffer.toString('base64')}`,
+    };
+}
+
 module.exports = {
     moderateAndNormalizeAvatar,
+    normalizePaymentScreenshot,
 };
