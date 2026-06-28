@@ -33,6 +33,15 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(false);
     const [actionMsg, setActionMsg] = useState('');
 
+    // Employer applications
+    const [applications, setApplications] = useState([]);
+    const [appsStatus, setAppsStatus] = useState('pending_review');
+    const [zoomImg, setZoomImg] = useState('');
+
+    // Settings
+    const [settings, setSettings] = useState({ sham_cash_phone: '', employer_fee_amount: '', employer_fee_currency: 'SYP' });
+    const [savingSettings, setSavingSettings] = useState(false);
+
     const logout = useCallback(() => {
         sessionStorage.removeItem('adminToken');
         setToken('');
@@ -79,11 +88,79 @@ export default function AdminDashboard() {
         }
     }, [token, reportsStatus, logout]);
 
+    const loadApplications = useCallback(async () => {
+        if (!token) return;
+        setLoading(true);
+        try {
+            const data = await adminFetch(`/admin/employer-applications?status=${appsStatus}`, token);
+            setApplications(data.applications);
+        } catch (err) {
+            if (err.message.includes('مصرح') || err.message.includes('صلاحية')) logout();
+        } finally {
+            setLoading(false);
+        }
+    }, [token, appsStatus, logout]);
+
+    const loadSettings = useCallback(async () => {
+        if (!token) return;
+        try {
+            const data = await adminFetch('/admin/settings', token);
+            setSettings((prev) => ({ ...prev, ...data.settings }));
+        } catch (err) {
+            if (err.message.includes('مصرح') || err.message.includes('صلاحية')) logout();
+        }
+    }, [token, logout]);
+
     useEffect(() => {
         if (tab === 'stats') loadStats();
         if (tab === 'users') loadUsers();
         if (tab === 'reports') loadReports();
-    }, [tab, loadStats, loadUsers, loadReports]);
+        if (tab === 'applications') loadApplications();
+        if (tab === 'settings') loadSettings();
+    }, [tab, loadStats, loadUsers, loadReports, loadApplications, loadSettings]);
+
+    const approveApplication = async (id) => {
+        try {
+            await adminFetch(`/admin/employer-applications/${id}/approve`, token, { method: 'PUT' });
+            setActionMsg('تمت الموافقة على الحساب');
+            loadApplications();
+        } catch (err) {
+            setActionMsg(err.message);
+        }
+        setTimeout(() => setActionMsg(''), 3000);
+    };
+
+    const rejectApplication = async (id) => {
+        const reason = window.prompt('سبب الرفض (اختياري):', '');
+        if (reason === null) return;
+        try {
+            await adminFetch(`/admin/employer-applications/${id}/reject`, token, {
+                method: 'PUT',
+                body: JSON.stringify({ reason }),
+            });
+            setActionMsg('تم رفض الطلب');
+            loadApplications();
+        } catch (err) {
+            setActionMsg(err.message);
+        }
+        setTimeout(() => setActionMsg(''), 3000);
+    };
+
+    const saveSettings = async () => {
+        setSavingSettings(true);
+        try {
+            await adminFetch('/admin/settings', token, {
+                method: 'PUT',
+                body: JSON.stringify(settings),
+            });
+            setActionMsg('تم حفظ الإعدادات');
+        } catch (err) {
+            setActionMsg(err.message);
+        } finally {
+            setSavingSettings(false);
+        }
+        setTimeout(() => setActionMsg(''), 3000);
+    };
 
     const blockUser = async (id, reason) => {
         try {
@@ -136,9 +213,9 @@ export default function AdminDashboard() {
         setTimeout(() => setActionMsg(''), 3000);
     };
 
-    // Admin access is handled in AuthPage (1810 + password)
+    // Admin login lives on its own dedicated URL.
     if (!token) {
-        return <Navigate to="/auth" replace />;
+        return <Navigate to="/admin/login" replace />;
     }
 
     const roleLabel = (r) => r === 'worker' ? 'عامل' : r === 'employer' ? 'صاحب عمل' : r || '—';
@@ -173,7 +250,9 @@ export default function AdminDashboard() {
                 {[
                     { key: 'stats', label: 'إحصائيات' },
                     { key: 'users', label: 'المستخدمون' },
+                    { key: 'applications', label: 'طلبات أصحاب العمل' },
                     { key: 'reports', label: 'البلاغات' },
+                    { key: 'settings', label: 'الإعدادات' },
                 ].map((t) => (
                     <button key={t.key} onClick={() => setTab(t.key)} style={{
                         padding: '14px 28px', border: 'none', background: tab === t.key ? '#2563eb' : 'transparent',
@@ -462,6 +541,101 @@ export default function AdminDashboard() {
                         )}
                     </>
                 )}
+
+                {/* Employer applications */}
+                {tab === 'applications' && (
+                    <>
+                        <div style={{ marginBottom: 20 }}>
+                            <select value={appsStatus} onChange={(e) => setAppsStatus(e.target.value)}
+                                style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                                <option value="pending_review">قيد المراجعة</option>
+                                <option value="approved">مقبولة</option>
+                                <option value="rejected">مرفوضة</option>
+                            </select>
+                        </div>
+
+                        {loading ? <p>جاري التحميل...</p> : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                {applications.map((a) => (
+                                    <div key={a.id} style={{ background: 'white', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                                        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                                            <img
+                                                src={a.payment_screenshot}
+                                                alt="إيصال الدفع"
+                                                onClick={() => setZoomImg(a.payment_screenshot)}
+                                                style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 10, border: '1px solid #e2e8f0', cursor: 'zoom-in' }}
+                                            />
+                                            <div style={{ flex: 1, minWidth: 200 }}>
+                                                <p style={{ fontWeight: 700, fontSize: 16 }}>{a.company_name || a.name || 'بدون اسم'}</p>
+                                                <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>الاسم: {a.name || '—'}</p>
+                                                <p style={{ fontSize: 13, color: '#64748b', direction: 'ltr', textAlign: 'right' }}>{a.phone}</p>
+                                                {a.email && <p style={{ fontSize: 13, color: '#64748b', direction: 'ltr', textAlign: 'right' }}>{a.email}</p>}
+                                                <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 6 }}>{new Date(a.created_at).toLocaleString('ar')}</p>
+                                                {a.status === 'rejected' && a.rejection_reason && (
+                                                    <p style={{ fontSize: 13, color: '#dc2626', marginTop: 6 }}>سبب الرفض: {a.rejection_reason}</p>
+                                                )}
+                                                {a.status === 'pending_review' && (
+                                                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                                                        <button onClick={() => approveApplication(a.id)} style={btnGreen}>موافقة</button>
+                                                        <button onClick={() => rejectApplication(a.id)} style={btnRed}>رفض</button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                                {applications.length === 0 && <p style={{ textAlign: 'center', color: '#94a3b8', padding: 40 }}>لا توجد طلبات</p>}
+                            </div>
+                        )}
+
+                        {zoomImg && (
+                            <div onClick={() => setZoomImg('')}
+                                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, cursor: 'zoom-out', padding: 24 }}>
+                                <img src={zoomImg} alt="إيصال الدفع" style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: 8 }} />
+                            </div>
+                        )}
+                    </>
+                )}
+
+                {/* Settings */}
+                {tab === 'settings' && (
+                    <div style={{ background: 'white', borderRadius: 12, padding: 24, maxWidth: 480, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                        <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 18, color: '#1e293b' }}>إعدادات الدفع</h3>
+
+                        <label style={settingsLabel}>رقم شام كاش</label>
+                        <input
+                            value={settings.sham_cash_phone || ''}
+                            onChange={(e) => setSettings((s) => ({ ...s, sham_cash_phone: e.target.value }))}
+                            placeholder="مثال: 0912345678"
+                            style={{ ...settingsInput, direction: 'ltr', textAlign: 'left' }}
+                        />
+
+                        <label style={settingsLabel}>قيمة الرسوم</label>
+                        <input
+                            type="number"
+                            value={settings.employer_fee_amount || ''}
+                            onChange={(e) => setSettings((s) => ({ ...s, employer_fee_amount: e.target.value }))}
+                            placeholder="مثال: 50000"
+                            style={settingsInput}
+                        />
+
+                        <label style={settingsLabel}>العملة</label>
+                        <select
+                            value={settings.employer_fee_currency || 'SYP'}
+                            onChange={(e) => setSettings((s) => ({ ...s, employer_fee_currency: e.target.value }))}
+                            style={settingsInput}
+                        >
+                            <option value="SYP">ليرة سورية (SYP)</option>
+                            <option value="USD">دولار (USD)</option>
+                            <option value="TRY">ليرة تركية (TRY)</option>
+                        </select>
+
+                        <button onClick={saveSettings} disabled={savingSettings}
+                            style={{ ...btnBlue, marginTop: 18, padding: '10px 24px', width: '100%' }}>
+                            {savingSettings ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -472,3 +646,5 @@ const tdStyle = { padding: '12px 14px', fontSize: 14 };
 const btnRed = { background: '#dc2626', color: 'white', border: 'none', padding: '6px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 };
 const btnGreen = { background: '#16a34a', color: 'white', border: 'none', padding: '6px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 };
 const btnBlue = { background: '#2563eb', color: 'white', border: 'none', padding: '6px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 };
+const settingsLabel = { display: 'block', fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6, marginTop: 14 };
+const settingsInput = { width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 14, boxSizing: 'border-box' };

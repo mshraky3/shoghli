@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+
+# Private/auth routes
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /profile/
+Disallow: /notifications
+Disallow: /requests
+Disallow: /job/new
+Disallow: /onboarding/
+Disallow: /auth
+Disallow: /admin
+
+Sitemap: https://shoghli.vercel.app/sitemap.xml

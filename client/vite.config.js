@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-const DEV_BACKEND_URL = 'http://localhost:3000';
+const DEV_BACKEND_URL = 'http://localhost:4000';
 const PROD_BACKEND_URL = 'https://shoghli-backend.vercel.app';
 
 // Auth mode: 'otp' = Firebase OTP verification, 'direct' = login by phone number only (no OTP)

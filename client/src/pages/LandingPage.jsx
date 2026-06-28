@@ -73,21 +73,25 @@ export default function LandingPage() {
                 </div>
             </nav>
 
-            <section className="landing-hero">
+            <section className="landing-hero has-bg-blur">
+                <div className="section-bg-blur" style={{ backgroundImage: `url(${IMAGES.categories})` }} />
+                <div className="section-bg-overlay" style={{ background: 'rgba(10,25,100,0.48)' }} />
                 <div className="landing-wrap landing-hero-grid">
                     <div className="landing-hero-copy">
                         <div className="landing-pill">
                             <SyriaFlag size={16} /> متاح الآن في سوريا فقط
                         </div>
-                        <h1>شغلي تربطك بالفرصة الأقرب إليك</h1>
+                        <h1>وظّف العامل الأقرب إليك</h1>
                         <p>
-                            شغلي تُقرّب العمّال من أصحاب العمل عبر خريطة تفاعلية واضحة وسريعة.
-                            إذا كنت تبحث عن عمل يومي أو تحتاج فني قريب منك، ستجد الطريق الأقصر للتواصل.
+                            شغلي تُقرّب أصحاب العمل من العمّال المهرة عبر خريطة تفاعلية واضحة وسريعة.
+                            سجّل كصاحب عمل وابدأ بالبحث عن الفني الذي تحتاجه قريباً منك.
                         </p>
                         <div className="landing-actions">
-                            <Link to="/auth" className="landing-btn landing-btn-solid">أبحث عن عامل</Link>
-                            <Link to="/auth" className="landing-btn landing-btn-glass">أبحث عن عمل</Link>
+                            <Link to="/auth" className="landing-btn landing-btn-solid">سجّل كصاحب عمل</Link>
                         </div>
+                        <p className="landing-app-note">
+                            تبحث عن عمل؟ حمّل تطبيق <strong>شغلي</strong> على هاتفك — مجاني بالكامل للعمّال.
+                        </p>
                         <div className="landing-tags">
                             <span>مجاني تماماً</span>
                             <span>بدون رسوم</span>
@@ -134,7 +138,7 @@ export default function LandingPage() {
                                     </div>
                                 </article>
                             ))}
-                            <Link to="/auth" className="landing-btn landing-btn-solid">سجّل كعامل الآن</Link>
+                            <span className="landing-btn landing-btn-glass landing-btn-static">حمّل تطبيق شغلي للعمّال</span>
                         </div>
 
                         <div className="landing-how-card employer">
@@ -231,11 +235,11 @@ export default function LandingPage() {
             <section className="landing-cta-band">
                 <div className="landing-wrap landing-head">
                     <h2>جاهز للبدء؟</h2>
-                    <p>سجّل الآن مجاناً وابدأ في إيجاد عمل أو توظيف عمّال في منطقتك</p>
+                    <p>سجّل الآن كصاحب عمل وابدأ في توظيف العمّال في منطقتك</p>
                     <div className="landing-actions">
-                        <Link to="/auth" className="landing-btn landing-btn-solid">سجّل كعامل</Link>
-                        <Link to="/auth" className="landing-btn landing-btn-glass">سجّل كصاحب عمل</Link>
+                        <Link to="/auth" className="landing-btn landing-btn-solid">سجّل كصاحب عمل</Link>
                     </div>
+                    <p className="landing-app-note">للباحثين عن عمل: حمّل تطبيق شغلي للجوال — مجاني بالكامل.</p>
                 </div>
             </section>
 

@@ -2,9 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthPage from './pages/AuthPage';
 import LandingPage from './pages/LandingPage';
-import RoleSelectPage from './pages/RoleSelectPage';
-import WorkerOnboarding from './pages/WorkerOnboarding';
 import EmployerOnboarding from './pages/EmployerOnboarding';
+import EmployerPaymentPage from './pages/EmployerPaymentPage';
 import Dashboard from './pages/Dashboard';
 import ProfilePage from './pages/ProfilePage';
 import UserProfilePage from './pages/UserProfilePage';
@@ -13,6 +12,7 @@ import RequestsPage from './pages/RequestsPage';
 import NewJobPage from './pages/NewJobPage';
 import TermsPage from './pages/TermsPage';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminLoginPage from './pages/AdminLoginPage';
 import SeoManager from './components/SeoManager';
 
 function ProtectedRoute({ children }) {
@@ -20,6 +20,14 @@ function ProtectedRoute({ children }) {
     if (loading) return <div className="loading-page"><div className="spinner" /><p>جاري التحميل...</p></div>;
     if (!user) return <Navigate to="/auth" replace />;
     return children;
+}
+
+// Where an authenticated employer should land based on their approval + onboarding state.
+// (All website accounts are employers.)
+export function employerHome(user) {
+    if (user.employer_status && user.employer_status !== 'approved') return '/payment';
+    if (!user.onboarding_completed) return '/onboarding/employer';
+    return '/dashboard';
 }
 
 function AppRoutes() {
@@ -35,11 +43,8 @@ function AppRoutes() {
             <Routes>
                 <Route path="/auth" element={user ? <Navigate to="/" replace /> : <AuthPage />} />
 
-                <Route path="/onboarding/role" element={
-                    <ProtectedRoute><RoleSelectPage /></ProtectedRoute>
-                } />
-                <Route path="/onboarding/worker" element={
-                    <ProtectedRoute><WorkerOnboarding /></ProtectedRoute>
+                <Route path="/payment" element={
+                    <ProtectedRoute><EmployerPaymentPage /></ProtectedRoute>
                 } />
                 <Route path="/onboarding/employer" element={
                     <ProtectedRoute><EmployerOnboarding /></ProtectedRoute>
@@ -67,13 +72,10 @@ function AppRoutes() {
                 <Route path="/terms" element={<TermsPage />} />
 
                 <Route path="/" element={
-                    user ? (
-                        !user.role ? <Navigate to="/onboarding/role" replace /> :
-                            !user.onboarding_completed ? <Navigate to={`/onboarding/${user.role}`} replace /> :
-                                <Navigate to="/dashboard" replace />
-                    ) : <LandingPage />
+                    user ? <Navigate to={employerHome(user)} replace /> : <LandingPage />
                 } />
 
+                <Route path="/admin/login" element={<AdminLoginPage />} />
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

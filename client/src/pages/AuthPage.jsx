@@ -1,10 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+﻿import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { employerHome } from '../App';
 import api from '../services/api';
-import { auth, RecaptchaVerifier, signInWithPhoneNumber } from '../services/firebase';
-
-const USE_OTP = typeof __AUTH_MODE__ !== 'undefined' ? __AUTH_MODE__ === 'otp' : true;
 
 const COUNTRY_CODES = [
     { code: '+963', label: '🇸🇾 +963', country: 'سوريا' },
@@ -19,116 +17,77 @@ const COUNTRY_CODES = [
 ];
 
 export default function AuthPage() {
-    const [phone, setPhone] = useState('');
-    const [countryCode, setCountryCode] = useState('+963');
-    const [showCountryMenu, setShowCountryMenu] = useState(false);
-    const [step, setStep] = useState('phone'); // 'phone' | 'otp' | 'admin-password'
-    const [otp, setOtp] = useState(['', '', '', '', '', '']);
-    const [adminPassword, setAdminPassword] = useState('');
+    const [tab, setTab] = useState('login');   // 'login' | 'register'
+    const [step, setStep] = useState('form');  // 'form' | 'otp'
+
+    // register fields
+    const [regName, setRegName] = useState('');
+    const [regCompany, setRegCompany] = useState('');
+    const [regEmail, setRegEmail] = useState('');
+    const [regPhone, setRegPhone] = useState('');
+    const [regPassword, setRegPassword] = useState('');
+    const [regCountry, setRegCountry] = useState('+963');
+    const [showRegCountry, setShowRegCountry] = useState(false);
+
+    // login fields
+    const [loginId, setLoginId] = useState('');
+    const [loginPassword, setLoginPassword] = useState('');
+
+    // OTP
+    const [otpDigits, setOtpDigits] = useState(['', '', '', '']);
+    const otpRefs = useRef([]);
+
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const [resendTimer, setResendTimer] = useState(0);
+
     const { login } = useAuth();
     const navigate = useNavigate();
-    const otpRefs = useRef([]);
-    const countryMenuRef = useRef(null);
-    const confirmationResultRef = useRef(null);
-    const recaptchaVerifierRef = useRef(null);
-    const selectedCountry = COUNTRY_CODES.find((c) => c.code === countryCode) || COUNTRY_CODES[0];
+    const regCountryRef = useRef(null);
 
-    useEffect(() => {
-        if (resendTimer > 0) {
-            const t = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
-            return () => clearTimeout(t);
-        }
-    }, [resendTimer]);
+    const formatPhone = (v) => v.replace(/\D/g, '').replace(/^0/, '').slice(0, 15);
 
-    useEffect(() => {
-        const onPointerDown = (event) => {
-            if (countryMenuRef.current && !countryMenuRef.current.contains(event.target)) {
-                setShowCountryMenu(false);
-            }
-        };
+    const selectedRegCountry = COUNTRY_CODES.find(c => c.code === regCountry) || COUNTRY_CODES[0];
 
-        document.addEventListener('mousedown', onPointerDown);
-        document.addEventListener('touchstart', onPointerDown);
-        return () => {
-            document.removeEventListener('mousedown', onPointerDown);
-            document.removeEventListener('touchstart', onPointerDown);
-        };
-    }, []);
-
-    const setupRecaptcha = () => {
-        if (recaptchaVerifierRef.current) {
-            recaptchaVerifierRef.current.clear();
-            recaptchaVerifierRef.current = null;
-        }
-        recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
-            size: 'invisible',
-            callback: () => { },
-        });
-    };
-
-    const formatPhone = (value) => {
-        let digits = value.replace(/\D/g, '');
-        if (digits.startsWith('0')) digits = digits.slice(1);
-        return digits.slice(0, 15);
-    };
-
-    const handleSendOtp = async (e) => {
+    const handleRegister = async (e) => {
         e.preventDefault();
-        if (phone === '1810') {
-            setError('');
-            setStep('admin-password');
-            return;
-        }
-
-        if (phone.length < 7) {
-            setError('أدخل رقم هاتف صحيح');
-            return;
-        }
-
         setError('');
-        setLoading(true);
-
-        // Direct login mode — skip OTP
-        if (!USE_OTP) {
-            try {
-                const fullPhone = `${countryCode}${phone}`;
-                const { data } = await api.post('/auth/phone-login', { phone: fullPhone });
-                login(data.token, data.refreshToken, data.user);
-                if (!data.user.role) navigate('/onboarding/role');
-                else if (!data.user.onboarding_completed) navigate(`/onboarding/${data.user.role}`);
-                else navigate('/dashboard');
-            } catch (err) {
-                console.error('Direct login error:', err);
-                setError(err.response?.data?.error || 'حدث خطأ. حاول مجدداً.');
-            } finally {
-                setLoading(false);
-            }
+        if (!regEmail || !regPhone || !regPassword) {
+            setError('يرجى ملء جميع الحقول المطلوبة');
             return;
         }
-
-        // OTP mode — Firebase
+        if (regPassword.length < 8) {
+            setError('كلمة المرور يجب أن تكون 8 أحرف على الأقل');
+            return;
+        }
+        setLoading(true);
         try {
-            setupRecaptcha();
-            const fullPhone = `${countryCode}${phone}`;
-            const result = await signInWithPhoneNumber(auth, fullPhone, recaptchaVerifierRef.current);
-            confirmationResultRef.current = result;
+            await api.post('/auth/send-otp', { email: regEmail });
+            setOtpDigits(['', '', '', '']);
             setStep('otp');
-            setResendTimer(60);
-            setOtp(['', '', '', '', '', '']);
-            setTimeout(() => otpRefs.current[0]?.focus(), 100);
         } catch (err) {
-            console.error('Firebase send OTP error:', err);
-            recaptchaVerifierRef.current = null;
-            if (err.code === 'auth/too-many-requests') {
-                setError('تم تجاوز الحد الأقصى لمحاولات الإرسال. حاول مرة أخرى لاحقاً.');
-            } else if (err.code === 'auth/invalid-phone-number') {
-                setError('رقم الهاتف غير صحيح');
-            } else {
-                setError('حدث خطأ أثناء إرسال رمز التحقق. حاول مجدداً.');
-            }
+            setError(err.response?.data?.error || 'حدث خطأ. حاول مجدداً.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        setError('');
+        if (!loginId || !loginPassword) {
+            setError('يرجى ملء جميع الحقول');
+            return;
+        }
+        setLoading(true);
+        try {
+            const { data } = await api.post('/auth/login', {
+                identifier: loginId,
+                password: loginPassword,
+            });
+            login(data.token, data.refreshToken, data.user);
+            navigate(employerHome(data.user));
+        } catch (err) {
+            setError(err.response?.data?.error || 'حدث خطأ. حاول مجدداً.');
         } finally {
             setLoading(false);
         }
@@ -136,370 +95,258 @@ export default function AuthPage() {
 
     const handleOtpChange = (index, value) => {
         if (!/^\d*$/.test(value)) return;
-        const newOtp = [...otp];
-        newOtp[index] = value.slice(-1);
-        setOtp(newOtp);
-        if (value && index < 5) {
-            otpRefs.current[index + 1]?.focus();
-        }
+        const newDigits = [...otpDigits];
+        newDigits[index] = value.slice(-1);
+        setOtpDigits(newDigits);
+        if (value && index < 3) otpRefs.current[index + 1]?.focus();
     };
 
     const handleOtpKeyDown = (index, e) => {
-        if (e.key === 'Backspace' && !otp[index] && index > 0) {
+        if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
             otpRefs.current[index - 1]?.focus();
         }
     };
 
-    const handleOtpPaste = (e) => {
-        e.preventDefault();
-        const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-        if (pasted.length === 6) {
-            setOtp(pasted.split(''));
-            otpRefs.current[5]?.focus();
-        }
-    };
-
-    const handleVerifyOtp = async (e) => {
-        e.preventDefault();
-        const code = otp.join('');
-        if (code.length !== 6) {
-            setError('أدخل رمز التحقق المكون من 6 أرقام');
-            return;
-        }
-        if (!confirmationResultRef.current) {
-            setError('حدث خطأ. أعد إرسال الرمز.');
-            return;
-        }
+    const handleConfirmOtp = async () => {
+        const otp = otpDigits.join('');
+        if (otp.length < 4) return;
         setError('');
         setLoading(true);
         try {
-            const userCredential = await confirmationResultRef.current.confirm(code);
-            const idToken = await userCredential.user.getIdToken();
-            const { data } = await api.post('/auth/firebase-verify', { idToken });
+            const fullPhone = regCountry + regPhone;
+            const { data } = await api.post('/auth/register', {
+                email: regEmail,
+                phone: fullPhone,
+                password: regPassword,
+                name: regName || undefined,
+                company_name: regCompany || undefined,
+                otp,
+            });
             login(data.token, data.refreshToken, data.user);
-            if (!data.user.role) navigate('/onboarding/role');
-            else if (!data.user.onboarding_completed) navigate(`/onboarding/${data.user.role}`);
-            else navigate('/dashboard');
+            navigate(employerHome(data.user));
         } catch (err) {
-            console.error('Firebase verify OTP error:', err);
-            if (err.code === 'auth/invalid-verification-code') {
-                setError('رمز التحقق غير صحيح');
-            } else if (err.code === 'auth/code-expired') {
-                setError('انتهت صلاحية رمز التحقق. أعد الإرسال.');
-            } else if (!err.response) {
-                setError('تعذر الاتصال بالخادم. تحقق من اتصالك بالإنترنت.');
-            } else {
-                setError(err.response?.data?.error || 'رمز التحقق غير صحيح');
-            }
+            setError(err.response?.data?.error || 'رمز التحقق غير صحيح');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleResend = async () => {
-        if (resendTimer > 0) return;
+    const handleResendOtp = async () => {
         setError('');
         setLoading(true);
         try {
-            recaptchaVerifierRef.current = null;
-            setupRecaptcha();
-            const fullPhone = `${countryCode}${phone}`;
-            const result = await signInWithPhoneNumber(auth, fullPhone, recaptchaVerifierRef.current);
-            confirmationResultRef.current = result;
-            setResendTimer(60);
-            setOtp(['', '', '', '', '', '']);
+            await api.post('/auth/send-otp', { email: regEmail });
+            setOtpDigits(['', '', '', '']);
+            otpRefs.current[0]?.focus();
         } catch (err) {
-            console.error('Firebase resend error:', err);
-            recaptchaVerifierRef.current = null;
-            setError('فشل إعادة الإرسال. حاول مجدداً.');
+            setError(err.response?.data?.error || 'حدث خطأ. حاول مجدداً.');
         } finally {
             setLoading(false);
         }
+    };
+
+    const switchTab = (t) => {
+        setTab(t);
+        setStep('form');
+        setError('');
+        setOtpDigits(['', '', '', '']);
     };
 
     return (
-        <div className="page" style={{ background: 'white' }}>
-            {USE_OTP && <div id="recaptcha-container"></div>}
-            <div className="container" style={{ paddingTop: '60px' }}>
-                <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-                    <img
-                        src="/imges/logo.ico"
-                        alt="شعار شغلي"
-                        style={{
-                            width: 80,
-                            height: 80,
-                            borderRadius: 20,
-                            objectFit: 'cover',
-                            display: 'block',
-                            margin: '0 auto 16px',
-                            boxShadow: '0 8px 22px rgba(37, 99, 235, 0.25)',
+        <div className='page' style={{ background: 'white' }}>
+            <div className='container' style={{ paddingTop: '50px', maxWidth: 420 }}>
+                {/* Logo */}
+                <div style={{ textAlign: 'center', marginBottom: 36 }}>
+                    <a href='/' style={{ textDecoration: 'none', display: 'inline-block' }}>
+                        <div style={{
+                            display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+                            padding: '18px 32px', borderRadius: 24,
+                            background: 'linear-gradient(145deg, #eff6ff, #dbeafe)',
+                            border: '1.5px solid #bfdbfe',
+                            boxShadow: '0 8px 32px rgba(37,99,235,0.13)',
+                            transition: 'transform 0.18s, box-shadow 0.18s',
                         }}
-                    />
-                    <p style={{ color: 'var(--gray-500)', marginTop: 4 }}>ابحث عن عمل قريب منك</p>
+                            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 14px 40px rgba(37,99,235,0.2)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 32px rgba(37,99,235,0.13)'; }}
+                        >
+                            <img
+                                src='/imges/logo.ico'
+                                alt='شعار شغلي'
+                                style={{ width: 64, height: 64, borderRadius: 16, objectFit: 'cover', boxShadow: '0 4px 14px rgba(37,99,235,0.25)' }}
+                            />
+                            <span style={{ fontSize: 26, fontWeight: 800, color: '#1d4ed8', letterSpacing: 1, fontFamily: 'Tajawal, sans-serif' }}>شغلي</span>
+                        </div>
+                    </a>
+                    <p style={{ color: 'var(--gray-400)', marginTop: 14, fontSize: 13 }}>منصة أصحاب العمل — وظّف عمالة ماهرة قريبة منك</p>
                 </div>
 
-                {error && <div className="alert alert-error">{error}</div>}
+                {error && <div className='alert alert-error' style={{ marginBottom: 16 }}>{error}</div>}
 
-                {step === 'phone' ? (
-                    <form onSubmit={handleSendOtp}>
-                        <label className="input-label">رقم الهاتف</label>
-                        <div style={{ display: 'flex', gap: 8, direction: 'ltr', position: 'relative' }}>
-                            <div ref={countryMenuRef} style={{ position: 'relative', minWidth: 150 }}>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowCountryMenu((v) => !v)}
-                                    aria-expanded={showCountryMenu}
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px 10px',
-                                        background: 'var(--gray-100)',
-                                        borderRadius: 'var(--radius-sm)',
-                                        fontWeight: 500,
-                                        border: '2px solid var(--gray-200)',
-                                        fontSize: 14,
-                                        cursor: 'pointer',
-                                        textAlign: 'left',
-                                    }}
-                                >
-                                    {selectedCountry.label}
-                                </button>
-                                {showCountryMenu && (
-                                    <div
-                                        style={{
-                                            position: 'absolute',
-                                            top: 'calc(100% + 6px)',
-                                            left: 0,
-                                            right: 0,
-                                            maxHeight: 220,
-                                            overflowY: 'auto',
-                                            background: 'white',
-                                            border: '1px solid var(--gray-200)',
-                                            borderRadius: 'var(--radius-sm)',
-                                            boxShadow: 'var(--shadow-lg)',
-                                            zIndex: 20,
-                                        }}
-                                    >
-                                        {COUNTRY_CODES.map((c) => (
-                                            <button
-                                                key={c.code}
-                                                type="button"
-                                                onClick={() => {
-                                                    setCountryCode(c.code);
-                                                    setShowCountryMenu(false);
-                                                }}
-                                                style={{
-                                                    width: '100%',
-                                                    textAlign: 'left',
-                                                    padding: '10px 12px',
-                                                    border: 'none',
-                                                    borderBottom: '1px solid var(--gray-100)',
-                                                    background: c.code === countryCode ? 'var(--primary-light)' : 'white',
-                                                    cursor: 'pointer',
-                                                    fontFamily: 'Tajawal, sans-serif',
-                                                    fontSize: 14,
-                                                }}
-                                            >
-                                                {c.label} ({c.country})
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                            <input
-                                className="input"
-                                type="tel"
-                                placeholder="9XXXXXXXX"
-                                value={phone}
-                                onChange={(e) => setPhone(formatPhone(e.target.value))}
-                                style={{ direction: 'ltr', textAlign: 'left' }}
-                                onFocus={() => setShowCountryMenu(false)}
-                                autoFocus
-                            />
-                        </div>
-
-                        <button
-                            type="submit"
-                            className="btn btn-primary btn-block btn-lg"
-                            style={{
-                                marginTop: 24,
-                                ...(phone !== '1810' && phone.length < 7
-                                    ? { opacity: 0.5, pointerEvents: 'none' }
-                                    : {}),
-                            }}
-                            disabled={loading}
-                        >
-                            {loading ? 'جاري الدخول...' : USE_OTP ? 'إرسال رمز التحقق' : 'تسجيل الدخول'}
-                        </button>
-                    </form>
-                ) : step === 'admin-password' ? (
-                    <form
-                        onSubmit={async (e) => {
-                            e.preventDefault();
-                            if (adminPassword !== '2019') {
-                                setError('كلمة المرور غير صحيحة');
-                                return;
-                            }
-
-                            setError('');
-                            setLoading(true);
-                            try {
-                                const { data } = await api.post('/admin/login', {
-                                    username: 'admin1810',
-                                    password: 'admin1810',
-                                });
-                                sessionStorage.setItem('adminToken', data.token);
-                                navigate('/admin');
-                            } catch (err) {
-                                setError(err.response?.data?.error || 'تعذر تسجيل دخول المدير');
-                            } finally {
-                                setLoading(false);
-                            }
-                        }}
-                    >
-                        <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                            <p style={{ color: 'var(--gray-600)', fontSize: 15 }}>أدخل كلمة مرور المشرف</p>
-                        </div>
-                        <input
-                            className="input"
-                            type="password"
-                            placeholder="كلمة المرور"
-                            value={adminPassword}
-                            onChange={(e) => setAdminPassword(e.target.value)}
-                            autoFocus
-                            style={{ textAlign: 'center', fontSize: 20, letterSpacing: 8 }}
-                        />
-                        <button
-                            type="submit"
-                            className="btn btn-primary btn-block btn-lg"
-                            style={{ marginTop: 24 }}
-                            disabled={loading || !adminPassword}
-                        >
-                            {loading ? 'جاري الدخول...' : 'دخول'}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setStep('phone');
-                                setError('');
-                                setAdminPassword('');
-                            }}
-                            style={{
-                                background: 'none',
-                                border: 'none',
-                                color: 'var(--gray-500)',
-                                fontSize: 13,
-                                cursor: 'pointer',
-                                display: 'block',
-                                margin: '12px auto 0',
-                            }}
-                        >
-                            رجوع
-                        </button>
-                    </form>
-                ) : USE_OTP ? (
-                    <form onSubmit={handleVerifyOtp}>
-                        <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                            <p style={{ color: 'var(--gray-600)', fontSize: 15 }}>تم إرسال رمز التحقق إلى</p>
-                            <p style={{ fontWeight: 600, direction: 'ltr', marginTop: 4, fontSize: 18 }}>
-                                {countryCode}
-                                {phone}
+                {step === 'otp' ? (
+                    <div>
+                        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+                            <div style={{ fontSize: 52, marginBottom: 12 }}>📧</div>
+                            <h3 style={{ color: 'var(--gray-800)', margin: '0 0 8px', fontSize: 20 }}>تحقق من بريدك الإلكتروني</h3>
+                            <p style={{ color: 'var(--gray-500)', fontSize: 14, margin: 0 }}>
+                                أرسلنا رمز التحقق إلى<br />
+                                <strong style={{ color: 'var(--primary)' }}>{regEmail}</strong>
                             </p>
                         </div>
-
-                        <div
-                            style={{
-                                display: 'flex',
-                                gap: 8,
-                                justifyContent: 'center',
-                                direction: 'ltr',
-                                marginBottom: 24,
-                            }}
-                        >
-                            {otp.map((digit, i) => (
+                        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', margin: '0 0 28px', direction: 'ltr' }}>
+                            {[0, 1, 2, 3].map(i => (
                                 <input
                                     key={i}
-                                    ref={(el) => {
-                                        otpRefs.current[i] = el;
-                                    }}
-                                    type="tel"
-                                    inputMode="numeric"
+                                    ref={el => otpRefs.current[i] = el}
+                                    type='text'
+                                    inputMode='numeric'
                                     maxLength={1}
-                                    value={digit}
-                                    onChange={(e) => handleOtpChange(i, e.target.value)}
-                                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                                    onPaste={i === 0 ? handleOtpPaste : undefined}
+                                    value={otpDigits[i]}
+                                    onChange={e => handleOtpChange(i, e.target.value)}
+                                    onKeyDown={e => handleOtpKeyDown(i, e)}
+                                    autoFocus={i === 0}
                                     style={{
-                                        width: 48,
-                                        height: 56,
-                                        textAlign: 'center',
-                                        fontSize: 22,
-                                        fontWeight: 600,
-                                        borderRadius: 'var(--radius-sm)',
-                                        border: '2px solid var(--gray-200)',
-                                        outline: 'none',
-                                        transition: 'border-color 0.2s',
+                                        width: 60, height: 68, fontSize: 30, fontWeight: 700,
+                                        textAlign: 'center', border: '2px solid var(--gray-200)',
+                                        borderRadius: 12, outline: 'none', color: 'var(--gray-800)',
+                                        background: 'white', transition: 'border-color 0.2s',
                                     }}
-                                    onFocus={(e) => {
-                                        e.target.style.borderColor = 'var(--primary)';
-                                    }}
-                                    onBlur={(e) => {
-                                        e.target.style.borderColor = 'var(--gray-200)';
-                                    }}
+                                    onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+                                    onBlur={e => e.target.style.borderColor = 'var(--gray-200)'}
                                 />
                             ))}
                         </div>
-
-                        <button
-                            type="submit"
-                            className="btn btn-primary btn-block btn-lg"
-                            disabled={loading || otp.join('').length !== 6}
-                        >
-                            {loading ? 'جاري التحقق...' : 'تأكيد'}
+                        <button onClick={handleConfirmOtp} className='btn btn-primary btn-block btn-lg'
+                            disabled={loading || otpDigits.join('').length < 4}>
+                            {loading ? 'جاري التحقق...' : 'تحقق وإنشاء الحساب'}
                         </button>
-
                         <div style={{ textAlign: 'center', marginTop: 16 }}>
-                            {resendTimer > 0 ? (
-                                <p style={{ color: 'var(--gray-400)', fontSize: 14 }}>
-                                    إعادة الإرسال بعد {resendTimer} ثانية
-                                </p>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={handleResend}
-                                    disabled={loading}
-                                    style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        color: 'var(--primary)',
-                                        fontSize: 14,
-                                        cursor: 'pointer',
-                                        fontWeight: 600,
-                                    }}
-                                >
-                                    إعادة إرسال الرمز
-                                </button>
-                            )}
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setStep('phone');
-                                    setError('');
-                                }}
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    color: 'var(--gray-500)',
-                                    fontSize: 13,
-                                    cursor: 'pointer',
-                                    display: 'block',
-                                    margin: '8px auto 0',
-                                }}
-                            >
-                                تغيير الرقم
+                            <button type='button' onClick={handleResendOtp} disabled={loading}
+                                style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: 14, fontFamily: 'Tajawal, sans-serif' }}>
+                                لم يصلك الرمز؟ أعد الإرسال
                             </button>
                         </div>
-                    </form>
-                ) : null}
+                        <button type='button' onClick={() => { setStep('form'); setOtpDigits(['', '', '', '']); setError(''); }}
+                            style={{ background: 'none', border: 'none', color: 'var(--gray-500)', fontSize: 13, cursor: 'pointer', display: 'block', margin: '12px auto 0', fontFamily: 'Tajawal, sans-serif' }}>
+                            رجوع
+                        </button>
+                    </div>
+                ) : (
+                    <>
+                        {/* Tab switcher */}
+                        <div style={{ display: 'flex', background: 'var(--gray-100)', borderRadius: 10, padding: 4, marginBottom: 28 }}>
+                            {[{ key: 'login', label: 'تسجيل الدخول' }, { key: 'register', label: 'حساب جديد' }].map(t => (
+                                <button key={t.key} type='button' onClick={() => switchTab(t.key)}
+                                    style={{ flex: 1, padding: '10px 0', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'Tajawal, sans-serif', fontSize: 15, fontWeight: tab === t.key ? 700 : 400, background: tab === t.key ? 'white' : 'transparent', color: tab === t.key ? 'var(--primary)' : 'var(--gray-500)', boxShadow: tab === t.key ? '0 1px 6px rgba(0,0,0,0.1)' : 'none', transition: 'all 0.2s' }}>
+                                    {t.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {tab === 'login' ? (
+                            <form onSubmit={handleLogin}>
+                                <label className='input-label'>البريد الإلكتروني أو رقم الهاتف</label>
+                                <input
+                                    className='input'
+                                    type='text'
+                                    placeholder='example@email.com أو +963...'
+                                    value={loginId}
+                                    onChange={e => setLoginId(e.target.value)}
+                                    autoFocus
+                                    dir='ltr'
+                                    style={{ textAlign: 'left' }}
+                                />
+                                <label className='input-label' style={{ marginTop: 16 }}>كلمة المرور</label>
+                                <input
+                                    className='input'
+                                    type='password'
+                                    placeholder='••••••••'
+                                    value={loginPassword}
+                                    onChange={e => setLoginPassword(e.target.value)}
+                                    dir='ltr'
+                                    style={{ textAlign: 'left' }}
+                                />
+                                <button type='submit' className='btn btn-primary btn-block btn-lg' style={{ marginTop: 24 }} disabled={loading}>
+                                    {loading ? 'جاري الدخول...' : 'تسجيل الدخول'}
+                                </button>
+                            </form>
+                        ) : (
+                            <form onSubmit={handleRegister}>
+                                <label className='input-label'>الاسم (اختياري)</label>
+                                <input
+                                    className='input'
+                                    type='text'
+                                    placeholder='اسمك الكامل'
+                                    value={regName}
+                                    onChange={e => setRegName(e.target.value)}
+                                />
+                                <label className='input-label' style={{ marginTop: 14 }}>اسم الشركة / المؤسسة (اختياري)</label>
+                                <input
+                                    className='input'
+                                    type='text'
+                                    placeholder='اسم شركتك أو نشاطك'
+                                    value={regCompany}
+                                    onChange={e => setRegCompany(e.target.value)}
+                                />
+                                <label className='input-label' style={{ marginTop: 14 }}>البريد الإلكتروني</label>
+                                <input
+                                    className='input'
+                                    type='email'
+                                    placeholder='example@email.com'
+                                    value={regEmail}
+                                    onChange={e => setRegEmail(e.target.value)}
+                                    dir='ltr'
+                                    style={{ textAlign: 'left' }}
+                                    required
+                                />
+                                <label className='input-label' style={{ marginTop: 14 }}>رقم الهاتف</label>
+                                <div style={{ display: 'flex', gap: 8, direction: 'ltr', position: 'relative' }} ref={regCountryRef}>
+                                    <div style={{ position: 'relative', minWidth: 110 }}>
+                                        <button type='button' onClick={() => setShowRegCountry(v => !v)}
+                                            style={{ width: '100%', padding: '12px 8px', background: 'var(--gray-100)', borderRadius: 'var(--radius-sm)', fontWeight: 500, border: '2px solid var(--gray-200)', fontSize: 13, cursor: 'pointer', textAlign: 'left' }}>
+                                            {selectedRegCountry.label}
+                                        </button>
+                                        {showRegCountry && (
+                                            <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, maxHeight: 200, overflowY: 'auto', background: 'white', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-sm)', boxShadow: 'var(--shadow-lg)', zIndex: 30 }}>
+                                                {COUNTRY_CODES.map(c => (
+                                                    <button key={c.code} type='button'
+                                                        onClick={() => { setRegCountry(c.code); setShowRegCountry(false); }}
+                                                        style={{ width: '100%', textAlign: 'left', padding: '9px 10px', border: 'none', borderBottom: '1px solid var(--gray-100)', background: c.code === regCountry ? 'var(--primary-light)' : 'white', cursor: 'pointer', fontFamily: 'Tajawal, sans-serif', fontSize: 13 }}>
+                                                        {c.label} ({c.country})
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <input
+                                        className='input'
+                                        type='tel'
+                                        placeholder='9XXXXXXXX'
+                                        value={regPhone}
+                                        onChange={e => setRegPhone(formatPhone(e.target.value))}
+                                        style={{ direction: 'ltr', textAlign: 'left' }}
+                                        onFocus={() => setShowRegCountry(false)}
+                                        required
+                                    />
+                                </div>
+                                <label className='input-label' style={{ marginTop: 14 }}>كلمة المرور</label>
+                                <input
+                                    className='input'
+                                    type='password'
+                                    placeholder='8 أحرف أو أرقام على الأقل'
+                                    value={regPassword}
+                                    onChange={e => setRegPassword(e.target.value)}
+                                    dir='ltr'
+                                    style={{ textAlign: 'left' }}
+                                    required
+                                    minLength={8}
+                                />
+                                <button type='submit' className='btn btn-primary btn-block btn-lg' style={{ marginTop: 24 }} disabled={loading}>
+                                    {loading ? 'جاري التسجيل...' : 'إنشاء حساب'}
+                                </button>
+                            </form>
+                        )}
+                    </>
+                )}
             </div>
         </div>
     );

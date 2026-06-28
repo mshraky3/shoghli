@@ -48,14 +48,9 @@ const ROUTE_SEO = {
         description: 'أضف فرصة عمل جديدة بسرعة عبر منصة شغلي.',
         index: false,
     },
-    '/onboarding/role': {
-        title: 'اختيار الدور | شغلي',
-        description: 'اختيار دورك لإكمال الإعداد في منصة شغلي.',
-        index: false,
-    },
-    '/onboarding/worker': {
-        title: 'إعداد حساب العامل | شغلي',
-        description: 'إكمال إعداد حساب العامل في منصة شغلي.',
+    '/payment': {
+        title: 'تفعيل حساب صاحب العمل | شغلي',
+        description: 'ادفع رسوم التفعيل وارفع إيصال الدفع لتفعيل حساب صاحب العمل في شغلي.',
         index: false,
     },
     '/onboarding/employer': {
